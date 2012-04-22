@@ -1,0 +1,48 @@
+
+#include "tcp.h"
+
+#include <sys/types.h>  /* socket, getaddrinfo */
+#include <sys/socket.h> /* socket, getaddrinfo */
+#include <netdb.h>      /* getaddrinfo */
+
+int tcp_resolve_listen(
+		char const *node,
+		char const *service,
+		struct addrinfo **res)
+{
+	if (!strcmp(node, "0.0.0.0")) {
+		node = NULL;
+	}
+
+
+	struct addrinfo hints;
+	struct addrinfo *result;
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;
+	hints.ai_protocol = 0;
+	hints.ai_cononname = NULL;
+	hints.ai_addr = NULL;
+	hints.ai_next = NULL;
+
+	return getaddrinfo(node, service, &hints, &result);
+}
+
+int tcp_listen(struct addrinfo *ai)
+{
+	struct addrinfo *rp;
+	for (rp = ai; rp != NULL; rp = rp->ai_next) {
+		int sfd = socket(ai->ai_family, ai->ai_socktype,
+				ai->ai_protocol);
+
+		if (sfd == -1)
+			continue;
+
+		if (bind(sfd, rp->ai_addr, rp->ai_addrlen) == 0)
+			return sfd;
+	}
+
+	return -1;
+}

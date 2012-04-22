@@ -1,0 +1,9 @@
+*~
+.*.swp
+*.[od]
+/TRACK-CFLAGS
+/TRACK-LDFLAGS
+/ctf
+/cla
+/vote
+/query
