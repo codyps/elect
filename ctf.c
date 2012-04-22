@@ -57,7 +57,7 @@ void *con_th(void *v_arg)
 	struct con_arg *arg = v_arg;
 	int cfd = arg->cfd;
 	unsigned char buf[128];
-	unsigned buf_occ = 0;
+	size_t buf_occ = 0;
 
 	int spawn_time = time(NULL);
 	int state      = S_NEW;
@@ -95,14 +95,29 @@ void *con_th(void *v_arg)
 		frame_op_t op = decode_op(buf);
 
 		switch(op) {
-		case OP_VOTE:
-			vote_parse(buf, len);
-			break;
+		case OP_VOTE: {
+			struct vote v;
+			int r = decode_vote(buf, len, &v);
+			if (r) {
+				// TODO: send FAIL resp.
+			}
+
+			r = vote_insert(arg->votes, &v);
+			if (r) {
+				// TODO: send FAIL resp.
+			}
+
+			// TODO: send SUCC resp.
+		}
+		break;
 		case OP_REQ_RESULTS:
+			// TODO: send results.
 			break;
 		case OP_REQ_VOTERS:
+			// TODO: send voters.
 			break;
 		case OP_STARTTLS:
+			// TODO: start tls.
 			break;
 		}
 	}

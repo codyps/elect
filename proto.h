@@ -1,5 +1,5 @@
-#ifndef FRAME_H_
-#define FRAME_H_
+#ifndef PROTO_H_
+#define PROTO_H_
 
 #include <stdint.h>
 
@@ -16,24 +16,32 @@
  */
 #define FRAME_LEN_BYTES 8
 #define FRAME_OP_BYTES  2
-
 typedef uint_fast16_t frame_op_t;
 typedef uint_fast64_t frame_len_t;
 
 enum {
+	OP_SUCC,
+	OP_FAIL,
+
+
 	/* Serviced by the CTF */
-	OP_VOTE,
+	OP_VOTE,	/* returns OP_FAIL or OP_SUCC. */
 	OP_STARTTLS,
 	OP_REQ_VOTERS,
 	OP_REQ_RESULTS
 };
 
+#define VALID_NUM_BYTES 16 /* 128 bit */
+#define IDENT_NUM_BYTES 16 /* 128 bit */
+typedef unsigned char valid_num_t[VALID_NUM_BYTES];
+typedef unsigned char ident_num_t[IDENT_NUM_BYTES];
+
 struct vote {
+	valid_num_t vn; /* handled out by cla */
+	ident_num_t id; /* randomly generated, used by voter */
 	unsigned char *vote;
 	size_t         vote_len; /* a vote is just viewed as
 				    a binary string. */
-	vaidation_num_t vn; /* handled out by cla */
-	ident_num_t     id; /* randomly generated, used by voter */
 };
 
 
@@ -64,5 +72,9 @@ frame_op_t  decode_op(unsigned char *buf)
 	return o;
 }
 
+int decode_vote(unsigned char *buf, size_t len)
+{
+	
+}
 
 #endif
