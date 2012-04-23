@@ -1,6 +1,9 @@
 
-#include "tabulate.h"
 #define _GNU_SOURCE
+
+#include "tabulate.h"
+#include "ballot.h"
+
 #include <search.h>
 #include <stdbool.h>
 #include <string.h>
@@ -29,7 +32,7 @@ static void valid_num_rec_init(
 
 static int valid_num_cmp(struct valid_num_rec *r1, struct valid_num_rec *r2)
 {
-	return memcmp(&r1->vn, &r2->vn, sizeof(valid_numt_t));
+	return memcmp(&r1->vn, &r2->vn, sizeof(valid_num_t));
 }
 
 #if 0
@@ -75,12 +78,13 @@ static struct valid_num_rec *vns_find_vn(
 
 static int vote_rec_cmp(struct vote_rec *v1, struct vote_rec *v2)
 {
-	if (v1->len > v2->len)
+	struct ballot_option *b1 = v1->opt, *b2 = v2->opt;
+	if (b1->len > b2->len)
 		return -1;
-	else if (v1->len < v2->len)
+	else if (b1->len < b2->len)
 		return 1;
 	else
-		return memcmp(v1->data, v2->data, v1->len);
+		return memcmp(b1->data, b2->data, b1->len);
 }
 
 static int vs_add_vote(struct vote_store *vs, struct vote *v)
@@ -90,7 +94,7 @@ static int vs_add_vote(struct vote_store *vs, struct vote *v)
 		return -ENOMEM;
 	}
 
-	vote_rec_init(vr, &v->opt);
+	vote_rec_init(vr, v->opt);
 
 	struct vote_rec *res = *(struct vote_rec **)tsearch(
 			vr,
@@ -109,7 +113,7 @@ static int vs_add_vote(struct vote_store *vs, struct vote *v)
 
 	ident_num_rec_init(ir, v);
 
-	list_add(&res->ident_nums, &id_rec->l);
+	list_add(&res->ident_nums, &ir->l);
 
 	res->vote_count ++;
 
@@ -140,7 +144,7 @@ int tabu_init(tabu_t *t)
 	if (r)
 		return r;
 
-	return pthread_mutex_init(&t->mut);
+	return pthread_mutex_init(&t->mut, NULL);
 }
 
 int tabu_insert_vote(tabu_t *t, struct vote *v)

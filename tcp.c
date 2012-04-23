@@ -1,6 +1,8 @@
 
 #include "tcp.h"
 
+
+#include <string.h>
 #include <sys/types.h>  /* socket, getaddrinfo */
 #include <sys/socket.h> /* socket, getaddrinfo */
 #include <netdb.h>      /* getaddrinfo */
@@ -23,7 +25,7 @@ int tcp_resolve_listen(
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 	hints.ai_protocol = 0;
-	hints.ai_cononname = NULL;
+	hints.ai_canonname = NULL;
 	hints.ai_addr = NULL;
 	hints.ai_next = NULL;
 

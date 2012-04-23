@@ -2,7 +2,9 @@
 #define TABULATE_H_
 
 #include "proto.h"  /* struct vote */
+#include "list.h"
 
+#include <stdbool.h>
 
 struct valid_num_rec {
 	valid_num_t vn;
@@ -20,9 +22,9 @@ struct ident_num_rec {
 };
 
 struct vote_rec {
-	struct ballot_option *opt;
 	unsigned vote_count;
 	struct list_head ident_nums;
+	struct ballot_option *opt;
 };
 
 static inline struct ballot_option *bo_ref_inc(struct ballot_option *ba)
@@ -51,7 +53,6 @@ typedef struct tabu_t {
 	pthread_mutex_t mut;
 } tabu_t;
 
-
 int tabu_init(tabu_t *t);
 
 /* returns 0 on success or one of the following error codes:
@@ -59,8 +60,8 @@ int tabu_init(tabu_t *t);
 int tabu_insert_vote(tabu_t *t, struct vote *v);
 void tabu_destroy(tabu_t *t);
 
-#define TABU_ALREADY_VOTED  127
-#define TABU_BAD_VALIDATION 128
+#define TABU_ALREADY_VOTED  256
+#define TABU_BAD_VALIDATION 257
 
 #endif
 

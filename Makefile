@@ -2,7 +2,7 @@ all::
 
 TARGETS = cla ctf query vote
 cla : cla.o
-ctf : ctf.o
+ctf : ctf.o proto.o tabulate.o tcp.o
 query: query.o
 vote: vote.o
 

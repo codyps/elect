@@ -9,10 +9,11 @@
  * Listen for requests from CLA for vote/non-vote data. (TLS, client auth)
  */
 
-#include "warn.h"
 #include "tcp.h"
-#include "tabulate.h"
+#include "warn.h"
 #include "proto.h"
+#include "ballot.h"
+#include "tabulate.h"
 
 #include <string.h>
 #include <errno.h>
@@ -25,7 +26,7 @@ struct con_arg {
 	struct sockaddr_storage address;
 	socklen_t address_len;
 	pthread_t th;
-	tabu_t tab;
+	tabu_t *tab;
 };
 
 static pthread_mutex_t con_prt_mut = PTHREAD_MUTEX_INITIALIZER;
@@ -60,9 +61,6 @@ static void *con_th(void *v_arg)
 	int cfd = arg->cfd;
 	unsigned char buf[128];
 	size_t buf_occ = 0;
-
-	int spawn_time = time(NULL);
-	int state      = S_NEW;
 
 	for (;;) {
 		ssize_t r = recv(cfd, buf + buf_occ, sizeof(buf) - buf_occ, 0);
@@ -101,15 +99,15 @@ static void *con_th(void *v_arg)
 			struct vote v;
 			int r = decode_vote(buf, len, &v);
 			if (r) {
-				// TODO: send FAIL resp.
+				proto_send_op(cfd, OP_FAIL);
 			}
 
 			r = tabu_insert_vote(arg->tab, &v);
 			if (r) {
-				// TODO: send FAIL resp.
+				proto_send_op(cfd, OP_FAIL);
 			}
 
-			// TODO: send SUCC resp.
+			proto_send_op(cfd, OP_SUCC);
 		}
 		break;
 		case OP_REQ_RESULTS:
@@ -123,6 +121,8 @@ static void *con_th(void *v_arg)
 			break;
 		}
 	}
+
+	return NULL;
 }
 
 int main(int argc, char *argv[])
@@ -162,7 +162,7 @@ int main(int argc, char *argv[])
 		return 5;
 	}
 
-	r = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+	r = pthread_attr_setdetachstate(&th_attr, PTHREAD_CREATE_DETACHED);
 	if (r) {
 		w_prt("pthread_attr_setdetachstate: %s\n", strerror(r));
 		return 6;
@@ -179,7 +179,9 @@ int main(int argc, char *argv[])
 	struct con_arg *ca = malloc(sizeof(*ca));
 
 	for(;;) {
-		int cfd = accept(tl, &ca->address, &ca->address_len);
+		int cfd = accept(tl,
+				(struct sockaddr *)&ca->address,
+				&ca->address_len);
 		if (cfd == -1) {
 			w_prt("accept failed: %s\n", strerror(errno));
 			switch(errno) {
@@ -204,16 +206,17 @@ int main(int argc, char *argv[])
 			case EPROTO:
 			default:
 				/* actually (probably) fatal */
+				break;
 			}
 
 			return -1;
 		}
 
-		ca->tab = tab;
+		ca->tab = &tab;
 		ca->c_id = c_id;
 		ca->cfd = cfd;
 
-		r = pthread_create(&ca->th, &attr, con_th, ca);
+		r = pthread_create(&ca->th, &th_attr, con_th, ca);
 		if (r) {
 			w_prt("pthread_create: %s\n", strerror(r));
 			continue;
