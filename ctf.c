@@ -20,6 +20,8 @@
 #include <stdarg.h>
 #include <pthread.h>
 
+#include <unistd.h>
+
 struct con_arg {
 	int c_id;
 	int cfd;
@@ -63,10 +65,20 @@ static void *con_th(void *v_arg)
 	size_t buf_occ = 0;
 
 	for (;;) {
+		if (buf_occ + 1 > sizeof(buf)) {
+			con_prt(arg, "overfilled buffer\n");
+			/* FIXME: bailout (cleanup?) */
+			break;
+		}
+
 		ssize_t r = recv(cfd, buf + buf_occ, sizeof(buf) - buf_occ, 0);
 		if (r == -1) {
-			con_prt(arg, "recv failed\n");
+			con_prt(arg, "recv failed %d\n", errno);
 			/* FIXME: bailout as needed */
+			continue;
+		} else if (r == 0) {
+			con_prt(arg, "recv got 0, %d\n", errno);
+			/* FIXME: handle */
 			continue;
 		}
 
@@ -99,29 +111,44 @@ static void *con_th(void *v_arg)
 			struct vote v;
 			int r = decode_vote(buf, len, &v);
 			if (r) {
-				proto_send_op(cfd, OP_FAIL);
+				int p = proto_send_op(cfd, OP_FAIL);
+				if (p) {
+					con_prt(arg,
+					"proto_send_op: fail %d\n", p);
+				}
 			}
 
 			r = tabu_insert_vote(arg->tab, &v);
 			if (r) {
-				proto_send_op(cfd, OP_FAIL);
+				int p = proto_send_op(cfd, OP_FAIL);
+				if (p) {
+					con_prt(arg,
+					"proto_send_op: fail %d\n", p);
+				}
 			}
 
-			proto_send_op(cfd, OP_SUCC);
+			int p = proto_send_op(cfd, OP_SUCC);
+			if (p) {
+				con_prt(arg,
+				"proto_send_op: succ %d\n", p);
+			}
 		}
-		break;
+			break;
 		case OP_REQ_RESULTS:
 			// TODO: send results.
+			
 			break;
 		case OP_REQ_VOTERS:
 			// TODO: send voters.
 			break;
-		case OP_STARTTLS:
-			// TODO: start tls.
-			break;
 		}
+
+		// TODO: handle packet advancing.
 	}
 
+	/* cleanup any alocations owned by this thread */
+	close(cfd);
+	free(v_arg);
 	return NULL;
 }
 

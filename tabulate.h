@@ -54,11 +54,12 @@ typedef struct tabu_t {
 } tabu_t;
 
 int tabu_init(tabu_t *t);
-
 /* returns 0 on success or one of the following error codes:
  * TABU_ALREADY_VOTED, TABU_BAD_VALIDATION, or -ENOMEM */
 int tabu_insert_vote(tabu_t *t, struct vote *v);
 void tabu_destroy(tabu_t *t);
+
+void tabu_for_each_ballot_option();
 
 #define TABU_ALREADY_VOTED  256
 #define TABU_BAD_VALIDATION 257

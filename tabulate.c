@@ -165,7 +165,7 @@ int tabu_insert_vote(tabu_t *t, struct vote *v)
 	}
 
 	/* add vote */
-	int r = vs_add_vote(&t->vs, &v);
+	int r = vs_add_vote(&t->vs, v);
 
 	if (!r) {
 		vnr->used = true;

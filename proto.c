@@ -61,16 +61,28 @@ int decode_vote(unsigned char *buf, size_t len, struct vote *res)
 	return 0;
 }
 
-int proto_send_op(int fd, unsigned op)
+/* FIXME: error handling */
+int proto_send_op(int fd, frame_op_t op)
 {
-	ssize_t r = send(fd, &op, sizeof(op), MSG_NOSIGNAL);
-
-	if (r < 0) {
-
+	// writev?
+	frame_len_t fl = sizeof(op);
+	ssize_t r = send(fd, &fl, sizeof(fl), MSG_NOSIGNAL);
+	if (r == -1) {
+		return -1;
 	} else if (r == 0) {
+		return 1;
+	} else if (r != sizeof(fl)) {
+		return -2;
+	}
 
+	r = send(fd, &op, sizeof(op), MSG_NOSIGNAL);
+
+	if (r == -1) {
+		return -1;
+	} else if (r == 0) {
+		return -2;
 	} else if (r != sizeof(op)) {
-
+		return -3;
 	}
 
 	return 0;

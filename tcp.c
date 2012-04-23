@@ -16,9 +16,7 @@ int tcp_resolve_listen(
 		node = NULL;
 	}
 
-
 	struct addrinfo hints;
-	struct addrinfo *result;
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET;
@@ -29,7 +27,26 @@ int tcp_resolve_listen(
 	hints.ai_addr = NULL;
 	hints.ai_next = NULL;
 
-	return getaddrinfo(node, service, &hints, &result);
+	return getaddrinfo(node, service, &hints, res);
+}
+
+int tcp_resolve_as_client(
+		char const *node,
+		char const *service,
+		struct addrinfo **res)
+{
+	struct addrinfo hints;
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = 0;
+	hints.ai_protocol = 0;
+	hints.ai_canonname = NULL;
+	hints.ai_addr = NULL;
+	hints.ai_next = NULL;
+
+	return getaddrinfo(node, service, &hints, res);
 }
 
 int tcp_listen(struct addrinfo *ai)

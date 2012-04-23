@@ -14,4 +14,11 @@ int tcp_resolve_listen(
 
 int tcp_listen(struct addrinfo *ai);
 
+int tcp_resolve_as_client(
+		char const *node,
+		char const *service,
+		struct addrinfo **res);
+
+int tcp_connect(struct addrinfo *ai);
+
 #endif

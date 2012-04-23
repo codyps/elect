@@ -39,7 +39,6 @@ enum {
 frame_len_t decode_len(unsigned char *buf);
 frame_op_t  decode_op(unsigned char *buf);
 int decode_vote(unsigned char *buf, size_t len, struct vote *res);
-
-int proto_send_op(int fd, unsigned op);
+int proto_send_op(int fd, frame_op_t op);
 
 #endif
