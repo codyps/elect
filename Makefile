@@ -10,7 +10,7 @@ CFLAGS = -ggdb -O0
 LDFLAGS=
 
 ALL_CFLAGS  = $(CFLAGS) -std=gnu99 -MMD -Wall -Wextra
-ALL_LDFLAGS = $(LDFLAGS)
+ALL_LDFLAGS = $(LDFLAGS) -pthread
 
 CC     = gcc
 LEX    = flex

@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <stddef.h>
 
+#include <sys/types.h>
+#include <sys/socket.h>
+
 /**
  * @buf - must have at least FRAME_LEN_BYTES bytes.
  */
@@ -54,6 +57,21 @@ int decode_vote(unsigned char *buf, size_t len, struct vote *res)
 	memcpy(&opt->data, bo_buf, bo_len);
 
 	res->opt = opt;
+
+	return 0;
+}
+
+int proto_send_op(int fd, unsigned op)
+{
+	ssize_t r = send(fd, &op, sizeof(op), MSG_NOSIGNAL);
+
+	if (r < 0) {
+
+	} else if (r == 0) {
+
+	} else if (r != sizeof(op)) {
+
+	}
 
 	return 0;
 }
