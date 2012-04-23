@@ -11,6 +11,7 @@
 
 #include "warn.h"
 #include "tcp.h"
+#include "tabulate.h"
 #include "proto.h"
 
 #include <string.h>
@@ -24,11 +25,12 @@ struct con_arg {
 	struct sockaddr_storage address;
 	socklen_t address_len;
 	pthread_t th;
+	tabu_t tab;
 };
 
-pthread_mutex_t con_prt_mut = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t con_prt_mut = PTHREAD_MUTEX_INITIALIZER;
 
-void con_prt(struct con_arg const *arg, char const *fmt, ...)
+static void con_prt(struct con_arg const *arg, char const *fmt, ...)
 {
 #if 0
 	char host[128];
@@ -52,7 +54,7 @@ void con_prt(struct con_arg const *arg, char const *fmt, ...)
 	pthread_mutex_unlock(&con_prt_mut);
 }
 
-void *con_th(void *v_arg)
+static void *con_th(void *v_arg)
 {
 	struct con_arg *arg = v_arg;
 	int cfd = arg->cfd;
@@ -102,7 +104,7 @@ void *con_th(void *v_arg)
 				// TODO: send FAIL resp.
 			}
 
-			r = vote_insert(arg->votes, &v);
+			r = tabu_insert_vote(arg->tab, &v);
 			if (r) {
 				// TODO: send FAIL resp.
 			}
@@ -163,11 +165,18 @@ int main(int argc, char *argv[])
 	r = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 	if (r) {
 		w_prt("pthread_attr_setdetachstate: %s\n", strerror(r));
+		return 6;
+	}
+
+	tabu_t tab;
+	r = tabu_init(&tab);
+	if (r) {
+		w_prt("tabu_init: %s\n", strerror(r));
+		return 7;
 	}
 
 	int c_id = 0;
 	struct con_arg *ca = malloc(sizeof(*ca));
-	ca->c_id = c_id;
 
 	for(;;) {
 		int cfd = accept(tl, &ca->address, &ca->address_len);
@@ -200,7 +209,10 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 
+		ca->tab = tab;
+		ca->c_id = c_id;
 		ca->cfd = cfd;
+
 		r = pthread_create(&ca->th, &attr, con_th, ca);
 		if (r) {
 			w_prt("pthread_create: %s\n", strerror(r));
@@ -210,7 +222,6 @@ int main(int argc, char *argv[])
 		/* TODO: track created threads? */
 		c_id ++;
 		ca = malloc(sizeof(*ca));
-		ca->c_id = c_cid;
 	}
 
 	return 0;

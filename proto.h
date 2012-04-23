@@ -39,9 +39,7 @@ typedef unsigned char ident_num_t[IDENT_NUM_BYTES];
 struct vote {
 	valid_num_t vn; /* handled out by cla */
 	ident_num_t id; /* randomly generated, used by voter */
-	unsigned char *vote;
-	size_t         vote_len; /* a vote is just viewed as
-				    a binary string. */
+	struct ballot_option *opt;
 };
 
 
