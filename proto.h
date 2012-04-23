@@ -70,9 +70,31 @@ frame_op_t  decode_op(unsigned char *buf)
 	return o;
 }
 
-int decode_vote(unsigned char *buf, size_t len)
+int decode_vote(unsigned char *buf, size_t len, struct vote *res)
 {
-	
+	if (len < VALID_NUM_BYTES + IDENT_NUM_BYTES + 1) {
+		return EINVAL;
+	}
+
+	memcpy(&res->vn, buf, VALID_NUM_BYTES);
+	memcpy(&res->id, buf + VALID_NUM_BYTES, IDENT_NUM_BYTES);
+
+	size_t bo_len = len - VALID_NUM_BYTES - IDENT_NUM_BYTES;
+	unsigned char *bo_buf = buf + VALID_NUM_BYTES + IDENT_NUM_BYTES;
+
+
+	struct ballot_option *opt = malloc(offsetof(typeof(*opt), data[bo_len]));
+	if (!opt) {
+		return ENOMEM;
+	}
+
+	opt->len = bo_len;
+	opt->ref = 1;
+	memcpy(&opt->data, bo_buf, bo_len);
+
+	res->opt = opt;
+
+	return 0;
 }
 
 #endif

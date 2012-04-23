@@ -3,11 +3,6 @@
 
 #include "proto.h"  /* struct vote */
 
-struct ballot_option {
-	int refs;
-	size_t len;
-	unsigned char data[];
-};
 
 struct valid_num_rec {
 	valid_num_t vn;
