@@ -12,7 +12,7 @@ int tcp_resolve_listen(
 
 #define tcp_resolve_strerror(e) gai_strerror(e)
 
-int tcp_listen(struct addrinfo *ai);
+int tcp_bind(struct addrinfo *ai);
 
 int tcp_resolve_as_client(
 		char const *node,

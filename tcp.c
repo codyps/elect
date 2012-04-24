@@ -6,6 +6,7 @@
 #include <sys/types.h>  /* socket, getaddrinfo */
 #include <sys/socket.h> /* socket, getaddrinfo */
 #include <netdb.h>      /* getaddrinfo */
+#include <unistd.h>
 
 int tcp_resolve_listen(
 		char const *node,
@@ -49,7 +50,7 @@ int tcp_resolve_as_client(
 	return getaddrinfo(node, service, &hints, res);
 }
 
-int tcp_listen(struct addrinfo *ai)
+int tcp_bind(struct addrinfo *ai)
 {
 	struct addrinfo *rp;
 	for (rp = ai; rp != NULL; rp = rp->ai_next) {
@@ -61,6 +62,27 @@ int tcp_listen(struct addrinfo *ai)
 
 		if (bind(sfd, rp->ai_addr, rp->ai_addrlen) == 0)
 			return sfd;
+		else
+			close(sfd);
+	}
+
+	return -1;
+}
+
+int tcp_connect(struct addrinfo *ai)
+{
+	struct addrinfo *rp;
+	for (rp = ai; rp != NULL; rp = rp->ai_next) {
+		int sfd = socket(ai->ai_family, ai->ai_socktype,
+				ai->ai_protocol);
+
+		if (sfd == -1)
+			continue;
+
+		if (connect(sfd, rp->ai_addr, rp->ai_addrlen) == 0)
+			return sfd;
+		else
+			close(sfd);
 	}
 
 	return -1;

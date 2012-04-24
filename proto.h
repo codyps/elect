@@ -41,4 +41,8 @@ frame_op_t  decode_op(unsigned char *buf);
 int decode_vote(unsigned char *buf, size_t len, struct vote *res);
 int proto_send_op(int fd, frame_op_t op);
 
+int  cla_get_vnum( int fd, char *ident, valid_num_t *vn);
+int  ctf_send_vote(int fd, char *vote,  valid_num_t *vn, ident_num_t *in);
+void ident_num_init(ident_num_t *in);
+
 #endif

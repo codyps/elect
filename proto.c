@@ -7,6 +7,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+#include <unistd.h>
+
 /**
  * @buf - must have at least FRAME_LEN_BYTES bytes.
  */
@@ -85,5 +87,23 @@ int proto_send_op(int fd, frame_op_t op)
 		return -3;
 	}
 
+	return 0;
+}
+
+void ident_num_init(ident_num_t *in)
+{
+	unsigned i;
+	for (i = 0; i < IDENT_NUM_BYTES; i++) {
+		(*in)[i] = rand();
+	}
+}
+
+int  cla_get_vnum( int fd, char *ident, valid_num_t *vn)
+{
+	return 0;
+}
+
+int  ctf_send_vote(int fd, char *vote,  valid_num_t *vn, ident_num_t *in)
+{
 	return 0;
 }

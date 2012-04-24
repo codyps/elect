@@ -136,7 +136,6 @@ static void *con_th(void *v_arg)
 			break;
 		case OP_REQ_RESULTS:
 			// TODO: send results.
-			
 			break;
 		case OP_REQ_VOTERS:
 			// TODO: send voters.
@@ -169,7 +168,7 @@ int main(int argc, char *argv[])
 		return 2;
 	}
 
-	int tl = tcp_listen(res);
+	int tl = tcp_bind(res);
 	freeaddrinfo(res);
 	if (tl == -1) {
 		w_prt("could create listener: %s\n", strerror(errno));
