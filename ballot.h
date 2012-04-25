@@ -5,8 +5,13 @@
 
 #define VALID_NUM_BYTES 16 /* 128 bit */
 #define IDENT_NUM_BYTES 16 /* 128 bit */
-typedef unsigned char valid_num_t[VALID_NUM_BYTES];
-typedef unsigned char ident_num_t[IDENT_NUM_BYTES];
+typedef struct valid_num_t {
+	unsigned char data[VALID_NUM_BYTES];
+} valid_num_t;
+
+typedef struct ident_num_t {
+	unsigned char data[IDENT_NUM_BYTES];
+} ident_num_t;
 
 struct vote {
 	valid_num_t vn; /* handled out by cla */

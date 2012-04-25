@@ -94,16 +94,18 @@ void ident_num_init(ident_num_t *in)
 {
 	unsigned i;
 	for (i = 0; i < IDENT_NUM_BYTES; i++) {
-		(*in)[i] = rand();
+		in->data[i] = rand();
 	}
 }
 
-int  cla_get_vnum( int fd, char *ident, valid_num_t *vn)
+int  cla_get_vnum(int fd, char const *name, char const *pass, valid_num_t *vn)
 {
-	return 0;
+	/* FIXME */
+	return -1;
 }
 
-int  ctf_send_vote(int fd, char *vote,  valid_num_t *vn, ident_num_t *in)
+int  ctf_send_vote(int fd, char const *vote, valid_num_t const *vn, ident_num_t const *in)
 {
-	return 0;
+	/* FIXME */
+	return -1;
 }

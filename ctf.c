@@ -89,16 +89,17 @@ static void *con_th(void *v_arg)
 			continue;
 		}
 
-		frame_len_t len = decode_len(buf);
-		if (len > sizeof(buf) - FRAME_LEN_BYTES || len < FRAME_OP_BYTES) {
-			con_prt(arg, "frame has bad len: %u\n", len);
+		frame_len_t frame_len = decode_len(buf);
+		if (frame_len > sizeof(buf) - FRAME_LEN_BYTES
+				|| frame_len < FRAME_OP_BYTES) {
+			con_prt(arg, "frame has bad len: %u\n", frame_len);
 			/* FIXME: close and die, do
 			 * not attempt to recover from possible
 			 * desync. */
 			continue;
 		}
 
-		if (buf_occ < (len + FRAME_LEN_BYTES)) {
+		if (buf_occ < (frame_len + FRAME_LEN_BYTES)) {
 			/* not enough data to complete frame */
 			continue;
 		}
@@ -106,10 +107,13 @@ static void *con_th(void *v_arg)
 		/* we have a frame */
 		frame_op_t op = decode_op(buf);
 
+		unsigned char *payload = buf + FRAME_LEN_BYTES + FRAME_OP_BYTES;
+		size_t     payload_len = frame_len - FRAME_OP_BYTES;
+
 		switch(op) {
 		case OP_VOTE: {
 			struct vote v;
-			int r = decode_vote(buf, len, &v);
+			int r = decode_vote(payload, payload_len, &v);
 			if (r) {
 				int p = proto_send_op(cfd, OP_FAIL);
 				if (p) {
@@ -238,9 +242,9 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 
-		ca->tab = &tab;
+		ca->tab  = &tab;
 		ca->c_id = c_id;
-		ca->cfd = cfd;
+		ca->cfd  = cfd;
 
 		r = pthread_create(&ca->th, &th_attr, con_th, ca);
 		if (r) {

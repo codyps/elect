@@ -35,26 +35,29 @@ static int valid_num_cmp(struct valid_num_rec *r1, struct valid_num_rec *r2)
 	return memcmp(&r1->vn, &r2->vn, sizeof(valid_num_t));
 }
 
-#if 0
-struct valid_num_rec *vns_insert(struct vote_num_store *vns, valid_num_t *vn)
+static int vns_insert(struct valid_num_store *vns, valid_num_t *vn)
 {
 	struct valid_num_rec *vnr = malloc(sizeof(*vnr));
 	if (!vnr) {
-		return NULL;
+		return -ENOMEM;
 	}
 
 	valid_num_rec_init(vnr, vn);
 
-	struct valid_num_rec *res = *(struct valid_num_rec **)tsearch(vns->root,
+	struct valid_num_rec *res = *(struct valid_num_rec **)tsearch(
+			vnr,
+			vns->root,
 			(comparison_fn_t)valid_num_cmp);
 
-	if (res == vnr) {
-		/* is new */
+	if (res != vnr) {
+		/* already exsists */
+		free(vnr);
+		return TABU_ALREADY_EXISTS;
 	}
 
-	return NULL;
+	/* new */
+	return 0;
 }
-#endif
 
 static struct valid_num_rec *vns_find_vn(
 		struct valid_num_store *vns,
@@ -74,6 +77,11 @@ static struct valid_num_rec *vns_find_vn(
 
 	/* is old */
 	return *res;
+}
+
+int tabu_add_valid_num(tabu_t *tab, valid_num_t *vn)
+{
+	return vns_insert(&tab->vns, vn);
 }
 
 static int vote_rec_cmp(struct vote_rec *v1, struct vote_rec *v2)
@@ -103,8 +111,10 @@ static int vs_add_vote(struct vote_store *vs, struct vote *v)
 
 	if (res != vr) {
 		free(vr);
+	} else {
+		/* number of `vote_rec`s increased */
+		vs->ct++;
 	}
-
 
 	struct ident_num_rec *ir = malloc(sizeof(*ir));
 	if (!ir) {

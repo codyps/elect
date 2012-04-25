@@ -12,12 +12,22 @@
 /*
  * frames are composed like so:
  *
- * | len (64 bits) | op (16 bits) | payload (0 to lots of bits) |
+ * | frame len (64 bits) | op (16 bits) | payload (0 to lots of bits) |
+ * | (not counted in len)|       frame                                |
  *
  * Except for the OP_VOTERS and OP_RESULTS frames, payload is small.
  *
  * XXX: special care should be taken while parsing and generating OP_VOTERS and
  *      OP_RESULTS to limit unnecissary memmory usage.
+ *
+ * OP_VOTE:  | validation num | ident num | ballot option          |
+ *           | fixed len      | fixed len | variable len           |
+ *           |                |           | entire rest of payload |
+ *
+ * OP_VOTERS:
+ *
+ * OP_RESULTS:
+ *
  *
  */
 #define FRAME_LEN_BYTES 8
@@ -30,10 +40,13 @@ enum {
 	OP_FAIL,
 
 	/* Serviced by the CTF */
-	OP_VOTE,	/* returns OP_FAIL or OP_SUCC. */
-	OP_STARTTLS,
-	OP_REQ_VOTERS,
-	OP_REQ_RESULTS
+	OP_VOTE,	/* serviced by CTF, returns OP_FAIL or OP_SUCC. */
+	OP_STARTTLS,	/* serviced by CTF */
+	OP_REQ_VOTERS,  /* serviced by CTF */
+	OP_VOTERS,	/* reply from CTF */
+	OP_REQ_RESULTS, /* serviced by CTF */
+	OP_RESULTS	/* reply from CTF */
+
 };
 
 frame_len_t decode_len(unsigned char *buf);
@@ -41,8 +54,9 @@ frame_op_t  decode_op(unsigned char *buf);
 int decode_vote(unsigned char *buf, size_t len, struct vote *res);
 int proto_send_op(int fd, frame_op_t op);
 
-int  cla_get_vnum( int fd, char *ident, valid_num_t *vn);
-int  ctf_send_vote(int fd, char *vote,  valid_num_t *vn, ident_num_t *in);
+int  cla_get_vnum( int fd, char const *name, char const *pass, valid_num_t *vn);
+int  ctf_send_vote(int fd, char const *vote,
+		valid_num_t const *vn, ident_num_t const *in);
 void ident_num_init(ident_num_t *in);
 
 #endif
