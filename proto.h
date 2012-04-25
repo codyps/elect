@@ -49,10 +49,22 @@ enum {
 
 };
 
+/* sends a simple frame containing only an op */
+int proto_frame_op(int fd, frame_op_t op);
+
+/* serializes a len */
+int proto_send_len(int fd, frame_len_t len);
+
+/* serializes a op, proto_send_len must be used prior. */
+int proto_send_op(int fd, frame_op_t op);
+
+int proto_send_valid_num(int fd, valid_num_t *vn);
+int proto_send_ident_num(int fd, ident_num_t *in);
+
+
 frame_len_t decode_len(unsigned char *buf);
 frame_op_t  decode_op(unsigned char *buf);
 int decode_vote(unsigned char *buf, size_t len, struct vote *res);
-int proto_send_op(int fd, frame_op_t op);
 
 int  cla_get_vnum( int fd, char const *name, char const *pass, valid_num_t *vn);
 int  ctf_send_vote(int fd, char const *vote,

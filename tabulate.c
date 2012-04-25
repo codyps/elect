@@ -81,7 +81,10 @@ static struct valid_num_rec *vns_find_vn(
 
 int tabu_add_valid_num(tabu_t *tab, valid_num_t *vn)
 {
-	return vns_insert(&tab->vns, vn);
+	pthread_mutex_lock(&tab->mut);
+	int r = vns_insert(&tab->vns, vn);
+	pthread_mutex_unlock(&tab->mut);
+	return r;
 }
 
 static int vote_rec_cmp(struct vote_rec *v1, struct vote_rec *v2)
@@ -116,6 +119,8 @@ static int vs_add_vote(struct vote_store *vs, struct vote *v)
 		vs->ct++;
 	}
 
+	vs->votes ++;
+
 	struct ident_num_rec *ir = malloc(sizeof(*ir));
 	if (!ir) {
 		return -ENOMEM;
@@ -130,10 +135,19 @@ static int vs_add_vote(struct vote_store *vs, struct vote *v)
 	return 0;
 }
 
+unsigned tabu_vote_ct(tabu_t *tab)
+{
+	pthread_mutex_lock(&tab->mut);
+	unsigned r = tab->vs.votes;
+	pthread_mutex_unlock(&tab->mut);
+	return r;
+}
+
 static int vote_store_init(struct vote_store *vs)
 {
-	vs->ct = 0;
-	vs->root = NULL;
+	vs->ct    = 0;
+	vs->votes = 0;
+	vs->root  = NULL;
 	return 0;
 }
 
@@ -183,4 +197,14 @@ int tabu_insert_vote(tabu_t *t, struct vote *v)
 
 	pthread_mutex_unlock(&t->mut);
 	return r;
+}
+
+int tabu_for_each_vote_rec(tabu_t *tab, vote_rec_cb cb, void *pdata)
+{
+	return -1;
+}
+
+int tabu_for_each_valid_num_rec(tabu_t *tab, valid_num_rec_cb cb, void *pdata)
+{
+	return -1;
 }

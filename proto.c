@@ -63,31 +63,60 @@ int decode_vote(unsigned char *buf, size_t len, struct vote *res)
 	return 0;
 }
 
-/* FIXME: error handling */
-int proto_send_op(int fd, frame_op_t op)
+static int sane_send(int fd, void *buf, size_t len)
 {
-	// writev?
-	frame_len_t fl = sizeof(op);
-	ssize_t r = send(fd, &fl, sizeof(fl), MSG_NOSIGNAL);
+	ssize_t r = send(fd, buf, len, MSG_NOSIGNAL);
 	if (r == -1) {
 		return -1;
 	} else if (r == 0) {
 		return 1;
-	} else if (r != sizeof(fl)) {
+	} else if (r != len) {
 		return -2;
-	}
-
-	r = send(fd, &op, sizeof(op), MSG_NOSIGNAL);
-
-	if (r == -1) {
-		return -1;
-	} else if (r == 0) {
-		return -2;
-	} else if (r != sizeof(op)) {
-		return -3;
 	}
 
 	return 0;
+}
+
+int proto_send_op(int fd, frame_op_t op)
+{
+	unsigned char buf[FRAME_OP_BYTES];
+	unsigned i;
+	for (i = 0; i < FRAME_OP_BYTES; i++) {
+		buf[i] = op >> (FRAME_OP_BYTES - i - 1);
+	}
+
+	return sane_send(fd, buf, FRAME_OP_BYTES);
+}
+
+int proto_send_len(int fd, frame_len_t fl)
+{
+	unsigned char buf[FRAME_LEN_BYTES];
+	unsigned i;
+	for (i = 0; i < FRAME_LEN_BYTES; i++) {
+		buf[i] = fl >> (FRAME_LEN_BYTES - i - 1);
+	}
+
+	return sane_send(fd, buf, FRAME_LEN_BYTES);
+}
+
+int proto_send_valid_num(int fd, valid_num_t *vn)
+{
+	return -1;
+}
+
+int proto_send_ident_num(int fd, ident_num_t *in)
+{
+	return -1;
+}
+
+int proto_frame_op(int fd, frame_op_t op)
+{
+	int r = proto_send_len(fd, sizeof(op));
+	if (r) {
+		return 1;
+	}
+
+	return proto_send_op (fd, op);
 }
 
 void ident_num_init(ident_num_t *in)

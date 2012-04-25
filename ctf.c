@@ -57,6 +57,15 @@ static void con_prt(struct con_arg const *arg, char const *fmt, ...)
 	pthread_mutex_unlock(&con_prt_mut);
 }
 
+static int send_voters_cb(struct valid_num_rec *vnr, void *pdata)
+{
+	struct con_arg *arg = pdata;
+	if (vnr->used) {
+		proto_send_valid_num(arg->cfd, &vnr->vn);
+	}
+	return 0;
+}
+
 static void *con_th(void *v_arg)
 {
 	struct con_arg *arg = v_arg;
@@ -120,27 +129,27 @@ static void *con_th(void *v_arg)
 			int r = decode_vote(payload, payload_len, &v);
 			if (r) {
 				con_prt(arg, "decode_vote: fail: %d\n", r);
-				int p = proto_send_op(cfd, OP_FAIL);
+				int p = proto_frame_op(cfd, OP_FAIL);
 				if (p) {
 					con_prt(arg,
-					"proto_send_op: fail %d\n", p);
+					"proto_frame_op: fail %d\n", p);
 				}
 			}
 
 			r = tabu_insert_vote(arg->tab, &v);
 			if (r) {
 				con_prt(arg, "tabu_insert_vote: fail: %d\n", r);
-				int p = proto_send_op(cfd, OP_FAIL);
+				int p = proto_frame_op(cfd, OP_FAIL);
 				if (p) {
 					con_prt(arg,
-					"proto_send_op: fail %d\n", p);
+					"proto_frame_op: fail %d\n", p);
 				}
 			}
 
-			int p = proto_send_op(cfd, OP_SUCC);
+			int p = proto_frame_op(cfd, OP_SUCC);
 			if (p) {
 				con_prt(arg,
-				"proto_send_op: succ %d\n", p);
+				"proto_frame_op: succ %d\n", p);
 			}
 		}
 			break;
@@ -149,6 +158,9 @@ static void *con_th(void *v_arg)
 			break;
 		case OP_REQ_VOTERS:
 			// TODO: send voters.
+			proto_send_len(cfd, FRAME_OP_BYTES + tabu_vote_ct(arg->tab) * VALID_NUM_BYTES);
+			proto_send_op (cfd, OP_VOTERS);
+			tabu_for_each_valid_num_rec(arg->tab, send_voters_cb, arg);
 			break;
 		}
 
