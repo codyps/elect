@@ -1,12 +1,13 @@
 
 #include "tcp.h"
-
+#include "warn.h"
 
 #include <string.h>
 #include <sys/types.h>  /* socket, getaddrinfo */
 #include <sys/socket.h> /* socket, getaddrinfo */
 #include <netdb.h>      /* getaddrinfo */
 #include <unistd.h>
+#include <errno.h>
 
 int tcp_resolve_listen(
 		char const *node,
@@ -86,4 +87,49 @@ int tcp_connect(struct addrinfo *ai)
 	}
 
 	return -1;
+}
+
+int tcpw_resolve_as_client(char const *nick, char const *addr, char const *port,
+		struct addrinfo **ai)
+{
+	int r = tcp_resolve_as_client(addr, port, ai);
+	if (r) {
+		w_prt("could not resolve %s [%s]:%s : %s\n",
+				nick, addr, port,
+				tcp_resolve_strerror(r));
+		return r;
+	}
+
+	return 0;
+}
+
+int tcpw_connect(char const *nick, char const *addr, char const *port,
+		struct addrinfo *ai)
+{
+	int fd = tcp_connect(ai);
+	if (fd == -1) {
+		w_prt("connect to %s [%s]:%s failed: %s\n",
+				nick, addr, port,
+				strerror(errno));
+		return -1;
+	}
+
+	return fd;
+}
+
+int tcpw_resolve_and_connect(char const *nick, char const *addr, char const *port)
+{
+	struct addrinfo *ai;
+	int r = tcpw_resolve_as_client(nick, addr, port, &ai);
+	if (r) {
+		return -1;
+	}
+
+	int fd = tcpw_connect(nick, addr, port, ai);
+	freeaddrinfo(ai);
+	if (fd < 0) {
+		return -1;
+	}
+
+	return fd;
 }

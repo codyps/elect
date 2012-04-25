@@ -189,10 +189,8 @@ int main(int argc, char *argv[])
 	}
 
 	struct addrinfo *ctf_ai;
-	int r = tcp_resolve_as_client(argv[3], argv[4], &ctf_ai);
+	int r = tcpw_resolve_as_client("ctf", argv[3], argv[4], &ctf_ai);
 	if (r) {
-		w_prt("could not resolve CTF [%s]:%s : %s\n", argv[3], argv[4],
-				tcp_resolve_strerror(r));
 		return 2;
 	}
 

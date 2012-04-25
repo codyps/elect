@@ -21,4 +21,16 @@ int tcp_resolve_as_client(
 
 int tcp_connect(struct addrinfo *ai);
 
+/* helper functions which print warnings */
+int tcpw_resolve_as_client(char const *nick,
+		char const *addr, char const *port,
+		struct addrinfo **ai);
+int tcpw_connect(char const *nick,
+		char const *addr,
+		char const *port,
+		struct addrinfo *ai);
+int tcpw_resolve_and_connect(char const *nick,
+		char const *addr,
+		char const *port);
+
 #endif
