@@ -63,6 +63,7 @@ static void *con_th(void *v_arg)
 	int cfd = arg->cfd;
 	unsigned char buf[128];
 	size_t buf_occ = 0;
+	bool need_more = true;
 
 	for (;;) {
 		if (buf_occ + 1 > sizeof(buf)) {
@@ -71,21 +72,23 @@ static void *con_th(void *v_arg)
 			break;
 		}
 
-		ssize_t r = recv(cfd, buf + buf_occ, sizeof(buf) - buf_occ, 0);
-		if (r == -1) {
-			con_prt(arg, "recv failed %d\n", errno);
-			/* FIXME: bailout as needed */
-			continue;
-		} else if (r == 0) {
-			con_prt(arg, "recv got 0, %d\n", errno);
-			/* FIXME: handle */
-			continue;
+		if (need_more) {
+			ssize_t r = recv(cfd, buf + buf_occ, sizeof(buf) - buf_occ, 0);
+			if (r == -1) {
+				con_prt(arg, "recv failed %d\n", errno);
+				/* FIXME: bailout as needed */
+				continue;
+			} else if (r == 0) {
+				con_prt(arg, "recv got 0, %d\n", errno);
+				/* FIXME: handle */
+				continue;
+			}
+			buf_occ += r;
 		}
-
-		buf_occ += r;
 
 		if (buf_occ < FRAME_LEN_BYTES + FRAME_OP_BYTES) {
 			/* minimal frame has only LEN & OP */
+			need_more = true;
 			continue;
 		}
 
@@ -93,14 +96,15 @@ static void *con_th(void *v_arg)
 		if (frame_len > sizeof(buf) - FRAME_LEN_BYTES
 				|| frame_len < FRAME_OP_BYTES) {
 			con_prt(arg, "frame has bad len: %u\n", frame_len);
-			/* FIXME: close and die, do
+			/* close and die, do
 			 * not attempt to recover from possible
 			 * desync. */
-			continue;
+			goto e_shutdown;
 		}
 
 		if (buf_occ < (frame_len + FRAME_LEN_BYTES)) {
 			/* not enough data to complete frame */
+			need_more = true;
 			continue;
 		}
 
@@ -115,6 +119,7 @@ static void *con_th(void *v_arg)
 			struct vote v;
 			int r = decode_vote(payload, payload_len, &v);
 			if (r) {
+				con_prt(arg, "decode_vote: fail: %d\n", r);
 				int p = proto_send_op(cfd, OP_FAIL);
 				if (p) {
 					con_prt(arg,
@@ -124,6 +129,7 @@ static void *con_th(void *v_arg)
 
 			r = tabu_insert_vote(arg->tab, &v);
 			if (r) {
+				con_prt(arg, "tabu_insert_vote: fail: %d\n", r);
 				int p = proto_send_op(cfd, OP_FAIL);
 				if (p) {
 					con_prt(arg,
@@ -146,9 +152,14 @@ static void *con_th(void *v_arg)
 			break;
 		}
 
-		// TODO: handle packet advancing.
+		// handle packet advancing.
+		size_t whole_frame_len = frame_len + FRAME_LEN_BYTES;
+		size_t left_len = buf_occ - whole_frame_len;
+		memmove(buf, buf + whole_frame_len, left_len);
+		need_more = false;
 	}
 
+e_shutdown:
 	/* cleanup any alocations owned by this thread */
 	close(cfd);
 	free(v_arg);
