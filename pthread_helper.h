@@ -1,6 +1,8 @@
 #include "warn.h"
 #include <pthread.h>
+#include <string.h>
 
+__attribute__((__unused__))
 static int c_pthread_attr_init_detach(pthread_attr_t *th_attr)
 {
 	int r = pthread_attr_init(th_attr);

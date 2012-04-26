@@ -40,42 +40,33 @@ struct pcc_arg {
 	pthread_t th;
 };
 
-struct con_arg {
-	int c_id;
-	int cfd;
-	struct sockaddr_storage address;
-	socklen_t address_len;
-	pthread_t th;
-
-};
-
-void *periodic_check_ctf(void *v_arg)
+static void *periodic_check_ctf(void *v_arg)
 {
 	/* TODO: periodically check the results from the CTF aren't lieing */
 	struct pcc_arg *arg = v_arg;
 	return NULL;
 }
 
-void *periodic_voters_ctf(void *v_arg)
+static void *periodic_voters_ctf(void *v_arg)
 {
 	/* TODO: update our knowledge of who voted */
 	struct pcc_arg *arg = v_arg;
 	return NULL;
 }
 
-void *con_th(void *v_arg)
+static void *cla_con_th(void *v_arg)
 {
 	/* TODO: handle incomming connections */
 	struct con_arg *arg = v_arg;
 	return NULL;
 }
 
-int voter_name_cmp(struct voter_rec *v1, struct voter_rec *v2)
+static int voter_name_cmp(struct voter_rec *v1, struct voter_rec *v2)
 {
 	return strcmp(v1->name, v2->name);
 }
 
-int voters_add_voter(struct voters *vs, struct voter_rec *vr)
+static int voters_add_voter(struct voters *vs, struct voter_rec *vr)
 {
 	struct voter_rec *res = *(struct voter_rec **)tsearch(
 			vr,
@@ -91,7 +82,7 @@ int voters_add_voter(struct voters *vs, struct voter_rec *vr)
 	return 0;
 }
 
-int read_auth_line(struct voter_rec *vr, char *line, size_t line_len)
+static int read_auth_line(struct voter_rec *vr, char *line, size_t line_len)
 {
 	char *pass = line;
 	char *name   = strsep(&pass, "\t");
@@ -109,13 +100,13 @@ int read_auth_line(struct voter_rec *vr, char *line, size_t line_len)
 	return 0;
 }
 
-void voters_init(struct voters *vs)
+static void voters_init(struct voters *vs)
 {
 	vs->root = NULL;
 	vs->ct   = 0;
 }
 
-int read_auth_file(struct voters *vs, char *fname)
+static int read_auth_file(struct voters *vs, char *fname)
 {
 	FILE *f = fopen(fname, "r");
 	if (!f) {
@@ -176,7 +167,7 @@ int read_auth_file(struct voters *vs, char *fname)
 	}
 }
 
-int send_voters_to_ctf(struct addrinfo *ai, struct voters *vs)
+static int send_voters_to_ctf(struct addrinfo *ai, struct voters *vs)
 {
 	return -1;
 }
@@ -242,58 +233,5 @@ int main(int argc, char *argv[])
 		return 3;
 	}
 
-	/* cla listen loop. use ctf's as a model */
-	int c_id = 0;
-	struct con_arg *ca = malloc(sizeof(*ca));
-
-	for(;;) {
-		int cfd = accept(tl,
-				(struct sockaddr *)&ca->address,
-				&ca->address_len);
-		if (cfd == -1) {
-			w_prt("accept failed: %s\n", strerror(errno));
-			switch(errno) {
-			case ECONNABORTED:
-			case EINTR:
-				/* definitely retry */
-				continue;
-			case EMFILE:
-			case ENFILE:
-			case ENOMEM:
-			case ENOBUFS:
-				/* indicate overloaded system */
-				continue;
-
-			case EAGAIN:
-				/* should never occur */
-
-			case EBADF:
-			case EINVAL:
-			case ENOTSOCK:
-			case EOPNOTSUPP:
-			case EPROTO:
-			default:
-				/* actually (probably) fatal */
-				break;
-			}
-
-			return -1;
-		}
-
-		ca->c_id = c_id;
-		ca->cfd = cfd;
-
-		r = pthread_create(&ca->th, &th_attr, con_th, ca);
-		if (r) {
-			w_prt("pthread_create: %s\n", strerror(r));
-			continue;
-		}
-
-		/* TODO: track created threads? */
-		c_id ++;
-		ca = malloc(sizeof(*ca));
-	}
-
-
-	return 0;
+	return accept_spawn_loop(tl, cla_con_th NULL);
 }

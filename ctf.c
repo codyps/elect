@@ -15,6 +15,7 @@
 #include "ballot.h"
 #include "tabulate.h"
 #include "pthread_helper.h"
+#include "accept_spawn.h"
 
 #include <string.h>
 #include <errno.h>
@@ -22,15 +23,6 @@
 #include <pthread.h>
 
 #include <unistd.h>
-
-struct con_arg {
-	int c_id;
-	int cfd;
-	struct sockaddr_storage address;
-	socklen_t address_len;
-	pthread_t th;
-	tabu_t *tab;
-};
 
 static pthread_mutex_t con_prt_mut = PTHREAD_MUTEX_INITIALIZER;
 
@@ -67,9 +59,10 @@ static int send_voters_cb(struct valid_num_rec *vnr, void *pdata)
 	return 0;
 }
 
-static void *con_th(void *v_arg)
+static void *ctf_con_th(void *v_arg)
 {
 	struct con_arg *arg = v_arg;
+	tabu_t *tab = arg->pdata;
 	int cfd = arg->cfd;
 	unsigned char buf[128];
 	size_t buf_occ = 0;
@@ -137,7 +130,7 @@ static void *con_th(void *v_arg)
 				}
 			}
 
-			r = tabu_insert_vote(arg->tab, &v);
+			r = tabu_insert_vote(tab, &v);
 			if (r) {
 				con_prt(arg, "tabu_insert_vote: fail: %d\n", r);
 				int p = proto_frame_op(cfd, OP_FAIL);
@@ -159,9 +152,9 @@ static void *con_th(void *v_arg)
 			break;
 		case OP_REQ_VOTERS:
 			// TODO: send voters.
-			proto_send_len(cfd, FRAME_OP_BYTES + tabu_vote_ct(arg->tab) * VALID_NUM_BYTES);
+			proto_send_len(cfd, FRAME_OP_BYTES + tabu_vote_ct(tab) * VALID_NUM_BYTES);
 			proto_send_op (cfd, OP_VOTERS);
-			tabu_for_each_valid_num_rec(arg->tab, send_voters_cb, arg);
+			tabu_for_each_valid_num_rec(tab, send_voters_cb, arg);
 			break;
 		}
 
@@ -192,10 +185,6 @@ int main(int argc, char *argv[])
 		return 3;
 	}
 
-	pthread_attr_t th_attr;
-	if (c_pthread_attr_init_detach(&th_attr))
-		return 5;
-
 	tabu_t tab;
 	int r = tabu_init(&tab);
 	if (r) {
@@ -203,57 +192,5 @@ int main(int argc, char *argv[])
 		return 7;
 	}
 
-	int c_id = 0;
-	struct con_arg *ca = malloc(sizeof(*ca));
-
-	for(;;) {
-		int cfd = accept(tl,
-				(struct sockaddr *)&ca->address,
-				&ca->address_len);
-		if (cfd == -1) {
-			w_prt("accept failed: %s\n", strerror(errno));
-			switch(errno) {
-			case ECONNABORTED:
-			case EINTR:
-				/* definitely retry */
-				continue;
-			case EMFILE:
-			case ENFILE:
-			case ENOMEM:
-			case ENOBUFS:
-				/* indicate overloaded system */
-				continue;
-
-			case EAGAIN:
-				/* should never occur */
-
-			case EBADF:
-			case EINVAL:
-			case ENOTSOCK:
-			case EOPNOTSUPP:
-			case EPROTO:
-			default:
-				/* actually (probably) fatal */
-				break;
-			}
-
-			return -1;
-		}
-
-		ca->tab  = &tab;
-		ca->c_id = c_id;
-		ca->cfd  = cfd;
-
-		r = pthread_create(&ca->th, &th_attr, con_th, ca);
-		if (r) {
-			w_prt("pthread_create: %s\n", strerror(r));
-			continue;
-		}
-
-		/* TODO: track created threads? */
-		c_id ++;
-		ca = malloc(sizeof(*ca));
-	}
-
-	return 0;
+	return accept_spawn_loop(tl, ctf_con_th, &tab);
 }
