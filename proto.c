@@ -63,7 +63,7 @@ int proto_decode_vote(unsigned char *buf, size_t len, struct vote *res)
 	return 0;
 }
 
-static int sane_send(int fd, void *buf, size_t len)
+static int sane_send(int fd, void const *buf, size_t len)
 {
 	ssize_t r = send(fd, buf, len, MSG_NOSIGNAL);
 	if (r == -1) {
@@ -92,13 +92,21 @@ DEF_PROTO_SEND(op, frame_op_t, FRAME_OP_BYTES)
 DEF_PROTO_SEND(len, frame_len_t, FRAME_LEN_BYTES)
 
 #define DEF_PROTO_SEND_FARRAY(name, struct_n, field)		\
-int proto_send_##name(int fd, struct_n *it)			\
+int proto_send_##name(int fd, struct_n const *it)			\
 {								\
 	return sane_send(fd, it->field, sizeof(it->field));	\
 }
 
 DEF_PROTO_SEND_FARRAY(valid_num, valid_num_t, data)
 DEF_PROTO_SEND_FARRAY(ident_num, ident_num_t, data)
+
+#define DEF_PROTO_SEND_EARRAY(name, struct_n, data_field, size_field)\
+int proto_send_##name(int fd, struct_n const *it)			\
+{								\
+	return sane_send(fd, it->data_field, it->size_field);	\
+}
+
+DEF_PROTO_SEND_EARRAY(ballot_option, struct ballot_option, data, len)
 
 int proto_frame_op(int fd, frame_op_t op)
 {

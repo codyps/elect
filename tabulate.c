@@ -206,13 +206,6 @@ int tabu_insert_vote(tabu_t *t, struct vote *v)
 	return r;
 }
 
-/*
-int tabu_for_each_vote_rec(tabu_t *tab, vote_rec_cb cb, void *pdata)
-{
-	return -1;
-}
-*/
-
 int tabu_for_each_vote_rec(tabu_t *tab, vote_rec_cb cb, void *pdata)
 {
 	pthread_mutex_lock(&tab->mut);

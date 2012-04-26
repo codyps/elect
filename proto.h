@@ -45,13 +45,14 @@ enum {
 	OP_REQ_VOTERS,  /* serviced by CTF */
 	OP_VOTERS,	/* reply from CTF */
 	OP_REQ_RESULTS, /* serviced by CTF */
-	OP_RESULTS,	/* reply from CTF */
+	OP_BALLOT_OPTION_CT, /* reply from CTF */
+	OP_RESULTS,	     /* reply from CTF */
 
 	/* CLA */
 	OP_REQ_VNUM,	/* serviced by CLA */
 	OP_VNUM,	/* responce */
 	OP_REQ_VOTER_NAMES, /* service */
-	OP_VOTER_NAMES      /* responce */
+	OP_VOTER_NAMES,      /* responce */
 };
 
 /* sends a simple frame containing only an op */
@@ -63,8 +64,9 @@ int proto_send_len(int fd, frame_len_t len);
 /* serializes a op, proto_send_len must be used prior. */
 int proto_send_op(int fd, frame_op_t op);
 
-int proto_send_valid_num(int fd, valid_num_t *vn);
-int proto_send_ident_num(int fd, ident_num_t *in);
+int proto_send_valid_num(int fd, valid_num_t const *vn);
+int proto_send_ident_num(int fd, ident_num_t const *in);
+int proto_send_ballot_option(int fd, struct ballot_option const *opt);
 
 frame_len_t proto_decode_len(unsigned char *buf);
 frame_op_t  proto_decode_op(unsigned char *buf);
