@@ -43,6 +43,10 @@ int main(int argc, char *argv[])
 		return 3;
 	}
 
+	printf("validation number: ");
+	valid_num_print(&vn, stdout);
+	putchar('\n');
+
 	int ctf_fd = tcpw_resolve_and_connect("ctf", argv[3], argv[4]);
 	if (ctf_fd == -1) {
 		return 6;
@@ -55,6 +59,10 @@ int main(int argc, char *argv[])
 		w_prt("ctf send vote failed: %d\n", r);
 		return 7;
 	}
+
+	printf("ident number: ");
+	ident_num_print(&in, stdout);
+	putchar('\n');
 
 	close(ctf_fd);
 	return 0;

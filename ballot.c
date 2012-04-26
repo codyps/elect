@@ -30,3 +30,29 @@ void valid_num_init(valid_num_t *vn)
 		vn->data[i] = rand();
 	}
 }
+
+static const char hexc[] = "0123456789abcdef";
+
+void valid_num_print(valid_num_t *vn, FILE *out)
+{
+	unsigned i;
+	for (i = 0; i < VALID_NUM_BYTES; i++) {
+		putc(hexc[vn->data[i] >> 4], out);
+		putc(hexc[vn->data[i] & 0xf], out);
+	}
+}
+
+void ident_num_print(ident_num_t *in, FILE *out)
+{
+	unsigned i;
+	for (i = 0; i < IDENT_NUM_BYTES; i++) {
+		putc(hexc[in->data[i] >> 4], out);
+		putc(hexc[in->data[i] & 0xf], out);
+	}
+}
+
+void ballot_option_print(struct ballot_option *bo, FILE *out)
+{
+	/* assume plain text */
+	fwrite(bo->data, bo->len, 1, out);
+}

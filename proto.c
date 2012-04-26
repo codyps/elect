@@ -149,12 +149,12 @@ int proto_frame_vnum(int fd, valid_num_t *vn)
 
 int  cla_get_vnum(int fd, char const *name, char const *pass, valid_num_t *vn)
 {
-	/* FIXME */
+	/* FIXME XXX TODO*/
 	return -1;
 }
 
 int  ctf_send_vote(int fd, char const *vote, valid_num_t const *vn, ident_num_t const *in)
 {
-	/* FIXME */
+	/* FIXME XXX TODO*/
 	return -1;
 }

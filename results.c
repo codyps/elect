@@ -1,5 +1,8 @@
-/* 
+/* results - show results from ctf
+ * querys and prints ctf results
  */
+
+#include "warn.h"
 
 int decode_results() {
 	unsigned char ct_buf[FRAME_LEN_BYTES + FRAME_OP_BYTES + FRAME_LEN_BYTES];
@@ -99,4 +102,24 @@ clean_bo:
 clean_fd:
 	close(fd);
 
+}
+
+
+int main(int argc, char **argv)
+{
+	if (argc != 3) {
+		w_prt("usage: %s <ctf addr> <ctf port>\n",
+				argc?argv[0]:"results");
+		return 1;
+	}
+
+
+	int fd = tcpw_resolve_and_connect("ctf", argv[1], argv[2]);
+	if (fd < 0) {
+		return 2;
+	}
+
+	/* TODO: fill in */
+
+	return 0;
 }
