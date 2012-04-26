@@ -160,6 +160,26 @@ int proto_frame_vnum(int fd, valid_num_t *vn)
 	return 0;
 }
 
+int proto_frame_voter(int fd, char const *name, size_t name_len)
+{
+	int r = proto_send_len(fd, FRAME_OP_BYTES + name_len);
+	if (r) {
+		return 1;
+	}
+
+	r = proto_send_op(fd, OP_VOTER_NAME);
+	if (r) {
+		return 2;
+	}
+
+	r = proto_send_bytes(fd, name, name_len);
+	if (r) {
+		return 3;
+	}
+
+	return 0;
+}
+
 int  cla_get_vnum(int fd, char const *name, size_t name_len,
 		char const *pass, size_t pass_len, valid_num_t *vn)
 {

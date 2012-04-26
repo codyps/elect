@@ -67,6 +67,8 @@ int proto_send_op(int fd, frame_op_t op);
 /* the op that only contains a vnum */
 int proto_frame_vnum(int fd, valid_num_t *vn);
 
+int proto_frame_voter(int fd, char const *name, size_t name_len);
+
 int proto_send_bytes(int fd, void const *data, size_t bytes);
 
 int proto_send_valid_num(int fd, valid_num_t const *vn);

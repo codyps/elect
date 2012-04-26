@@ -43,6 +43,7 @@ struct voters {
 	void *root_by_name;
 	void *root_by_vn;
 	unsigned ct;
+	unsigned num_voted;
 	struct list_head v_list;
 };
 
@@ -237,6 +238,7 @@ static void *periodic_voters_ctf(void *v_arg)
 			struct voter_rec *vr = voters_find_by_vn(arg->vs, &vn);
 			if (vr) {
 				vr->has_voted = true;
+				arg->vs->num_voted ++;
 			} else {
 				w_prt("Invalid Validation Number reported: ");
 				valid_num_print(&vn, stderr);
@@ -278,6 +280,7 @@ static void voters_init(struct voters *vs)
 	vs->root_by_name = NULL;
 	vs->root_by_vn = NULL;
 	vs->ct         = 0;
+	vs->num_voted  = 0;
 	list_init(&vs->v_list);
 }
 
@@ -350,7 +353,7 @@ static int send_voters_to_ctf(struct addrinfo *ai, char *addr, char *port, struc
 
 	struct voter_rec *vr;
 	list_for_each_entry(vr, &vs->v_list, l) {
-		/* TODO: serialize vnum and send */
+		/* serialize vnum and send */
 		int r = proto_frame_vnum(fd, &vr->vn);
 		if (r) {
 			w_prt("error sending vnum");
@@ -409,9 +412,24 @@ static int cla_handle_packet(struct con_arg *arg, frame_op_t op,
 	}
 		break;
 	case OP_REQ_VOTER_NAMES: {
-		/* TODO: XXX: */
 		int cfd = arg->cfd;
-		proto_send_len(cfd, FRAME_OP_BYTES + FRAME_LEN_BYTES);
+		proto_send_len(cfd, FRAME_OP_BYTES + FRAME_LEN_BYTES + FRAME_LEN_BYTES);
+		proto_send_op(cfd, OP_VOTER_NAMES_CT);
+		proto_send_len(cfd, vs->num_voted);
+		proto_send_len(cfd, vs->ct - vs->num_voted);
+
+		struct voter_rec *vr;
+		list_for_each_entry(vr, &vs->v_list, l) {
+			if (vr->has_voted) {
+				proto_frame_voter(cfd, vr->name, vr->name_len);
+			}
+		}
+
+		list_for_each_entry(vr, &vs->v_list, l) {
+			if (!vr->has_voted) {
+				proto_frame_voter(cfd, vr->name, vr->name_len);
+			}
+		}
 
 	}
 		break;
