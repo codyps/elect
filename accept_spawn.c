@@ -76,8 +76,8 @@ static void *con_th(void *v_arg)
 				}
 				continue;
 			} else if (r == 0) {
-				con_prt(arg, "recv got 0: %s\n", strerror(errno));
 				/* assuming the other end broke the connection */
+				con_prt(arg, "closed\n");
 				goto e_shutdown;
 			}
 			buf_occ += r;
@@ -134,6 +134,8 @@ int accept_spawn_loop(int fd, handle_packet_cb handle_packet, void *pdata)
 {
 	int c_id = 0;
 	struct con_arg *ca = malloc(sizeof(*ca));
+	memset(&ca->address, 0, sizeof(ca->address));
+	memset(&ca->address_len, 0, sizeof(ca->address_len));
 
 	pthread_attr_t th_attr;
 	if (c_pthread_attr_init_detach(&th_attr))
@@ -190,6 +192,8 @@ int accept_spawn_loop(int fd, handle_packet_cb handle_packet, void *pdata)
 		/* TODO: track created threads? */
 		c_id ++;
 		ca = malloc(sizeof(*ca));
+		memset(&ca->address, 0, sizeof(ca->address));
+		memset(&ca->address_len, 0, sizeof(ca->address_len));
 	}
 
 	return 0;

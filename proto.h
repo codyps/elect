@@ -30,10 +30,10 @@
  *
  *
  */
-#define FRAME_LEN_BYTES 8
-#define FRAME_OP_BYTES  2
 typedef uint_fast16_t frame_op_t;
 typedef uint_fast64_t frame_len_t;
+#define FRAME_LEN_BYTES 8
+#define FRAME_OP_BYTES  2
 
 enum {
 	OP_SUCC,

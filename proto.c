@@ -71,13 +71,18 @@ int proto_decode_vote(unsigned char *buf, size_t len, struct vote *res)
 
 static int sane_send(int fd, void const *buf, size_t len)
 {
-	ssize_t r = send(fd, buf, len, MSG_NOSIGNAL);
-	if (r == -1) {
-		return -1;
-	} else if (r == 0) {
-		return 1;
-	} else if (r != (ssize_t)len) {
-		return -2;
+	while(len) {
+		ssize_t r = send(fd, buf, len, MSG_NOSIGNAL);
+		if (r == -1) {
+			return -1;
+		} else if (r == 0) {
+			return 1;
+		} else if (r < 0) {
+			return -2;
+		}
+
+		len -= r;
+		buf += r;
 	}
 
 	return 0;
@@ -89,7 +94,7 @@ int proto_send_##name(int fd, type it)		\
 	unsigned char buf[bytes];		\
 	unsigned i;				\
 	for (i = 0; i < bytes; i++) {		\
-		buf[i] = it >> (bytes - i - 1);	\
+		buf[i] = it >> ((bytes - i - 1) * 8);	\
 	}					\
 	return sane_send(fd, buf, bytes);	\
 }

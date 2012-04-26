@@ -39,7 +39,7 @@ struct voter_rec {
 };
 
 struct voters {
-	void *root;
+	void *root_by_name;
 	void *root_by_vn;
 	unsigned ct;
 	struct list_head v_list;
@@ -79,7 +79,12 @@ struct voter_rec *voters_find_by_vn(struct voters *v, valid_num_t *vn)
 
 static int voter_name_cmp(struct voter_rec *v1, struct voter_rec *v2)
 {
-	return strcmp(v1->name, v2->name);
+	if (v1->name_len < v2->name_len)
+		return 1;
+	else if (v1->name_len > v2->name_len)
+		return -1;
+	else
+		return memcmp(v1->name, v2->name, v2->name_len);
 }
 
 static struct voter_rec *voters_find_by_name(struct voters const *v,
@@ -92,7 +97,7 @@ static struct voter_rec *voters_find_by_name(struct voters const *v,
 
 	struct voter_rec **res = (struct voter_rec **)tfind(
 			&vr,
-			v->root,
+			&v->root_by_name,
 			(comparison_fn_t)voter_name_cmp);
 
 	if (!res) {
@@ -106,23 +111,40 @@ static struct voter_rec *voters_find_by_name(struct voters const *v,
 
 static int voters_add_voter(struct voters *vs, struct voter_rec *vr)
 {
-	struct voter_rec *res = *(struct voter_rec **)tsearch(
+	struct voter_rec **r1 = (struct voter_rec **)tsearch(
 			vr,
-			vs->root,
+			&vs->root_by_name,
 			(comparison_fn_t)voter_name_cmp);
 
-	struct voter_rec *res2 = *(struct voter_rec **)tsearch(
+	if (r1 == NULL) {
+		w_prt("out of mem for voters (1)\n");
+		return -1;
+	}
+
+	struct voter_rec **r2 = (struct voter_rec **)tsearch(
 			vr,
-			vs->root_by_vn,
+			&vs->root_by_vn,
 			(comparison_fn_t)voter_vn_cmp);
 
-	if (res != vr || res2 != vr) {
+	if (r2 == NULL) {
+		w_prt("out of mem for voters (2)\n");
+		return -1;
+	}
+
+	if (*r1 != vr) {
 		/* already exsists */
+		w_prt("-- r1\n");
+		return 1;
+	}
+
+	if (*r2 != vr) {
+		/* already exsists */
+		w_prt("-- r2\n");
 		return 1;
 	}
 
 	/* new */
-	list_add(&vs->v_list, &res->l);
+	list_add(&vs->v_list, &(*r1)->l);
 	vs->ct ++;
 	return 0;
 }
@@ -148,7 +170,7 @@ static void *periodic_voters_ctf(void *v_arg)
 			w_prt("periodic voters: error on recv: %s\n", strerror(errno));
 			goto clean_fd;
 		} else if (ct_len == 0) {
-			w_prt("periodic voters: len = 0, assuming other end died.");
+			w_prt("periodic voters: len = 0, assuming other end died.\n");
 			goto clean_fd;
 		} else if (ct_len != sizeof(ct_buf)) {
 			w_prt("periodic voters: recv has bad size: got %d != %d wanted\n",
@@ -231,9 +253,9 @@ static int read_auth_line(struct voter_rec *vr, char *line,
 
 static void voters_init(struct voters *vs)
 {
-	vs->root = NULL;
+	vs->root_by_name = NULL;
 	vs->root_by_vn = NULL;
-	vs->ct   = 0;
+	vs->ct         = 0;
 	list_init(&vs->v_list);
 }
 

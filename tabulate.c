@@ -47,7 +47,7 @@ static int vns_insert(struct valid_num_store *vns, valid_num_t *vn)
 
 	struct valid_num_rec *res = *(struct valid_num_rec **)tsearch(
 			vnr,
-			vns->root,
+			&vns->root,
 			(comparison_fn_t)valid_num_cmp);
 
 	if (res != vnr) {
@@ -108,17 +108,19 @@ static int vs_add_vote(struct vote_store *vs, struct vote *v)
 
 	vote_rec_init(vr, v->opt);
 
-	struct vote_rec *res = *(struct vote_rec **)tsearch(
+	struct vote_rec **res = (struct vote_rec **)tsearch(
 			vr,
 			&vs->root,
 			(comparison_fn_t)vote_rec_cmp);
+	if (!res)
+		return -ENOMEM;
 
-	if (res != vr) {
+	if (*res != vr) {
 		free(vr);
 	} else {
 		/* number of `vote_rec`s increased */
 		vs->vote_recs++;
-		list_add(&vs->vr_list, &res->l);
+		list_add(&vs->vr_list, &(*res)->l);
 	}
 
 	vs->votes ++;
@@ -130,9 +132,9 @@ static int vs_add_vote(struct vote_store *vs, struct vote *v)
 
 	ident_num_rec_init(ir, v);
 
-	list_add(&res->ident_nums, &ir->l);
+	list_add(&(*res)->ident_nums, &ir->l);
 
-	res->vote_count ++;
+	(*res)->vote_count ++;
 
 	return 0;
 }
