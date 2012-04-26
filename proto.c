@@ -12,7 +12,7 @@
 /**
  * @buf - must have at least FRAME_LEN_BYTES bytes.
  */
-frame_len_t decode_len(unsigned char *buf)
+frame_len_t proto_decode_len(unsigned char *buf)
 {
 	frame_len_t l = 0;
 
@@ -24,19 +24,19 @@ frame_len_t decode_len(unsigned char *buf)
 	return l;
 }
 
-frame_op_t  decode_op(unsigned char *buf)
+frame_op_t proto_decode_op(unsigned char *buf)
 {
 	frame_op_t o = 0;
 
 	unsigned i;
 	for (i = 0; i < FRAME_OP_BYTES; i++) {
-		o = o << 8 | buf[i + FRAME_LEN_BYTES];
+		o = o << 8 | buf[i];
 	}
 
 	return o;
 }
 
-int decode_vote(unsigned char *buf, size_t len, struct vote *res)
+int proto_decode_vote(unsigned char *buf, size_t len, struct vote *res)
 {
 	if (len < VALID_NUM_BYTES + IDENT_NUM_BYTES + 1) {
 		return EINVAL;
@@ -77,37 +77,28 @@ static int sane_send(int fd, void *buf, size_t len)
 	return 0;
 }
 
-int proto_send_op(int fd, frame_op_t op)
-{
-	unsigned char buf[FRAME_OP_BYTES];
-	unsigned i;
-	for (i = 0; i < FRAME_OP_BYTES; i++) {
-		buf[i] = op >> (FRAME_OP_BYTES - i - 1);
-	}
-
-	return sane_send(fd, buf, FRAME_OP_BYTES);
+#define DEF_PROTO_SEND(name, type, bytes)	\
+int proto_send_##name(int fd, type it)		\
+{						\
+	unsigned char buf[bytes];		\
+	unsigned i;				\
+	for (i = 0; i < bytes; i++) {		\
+		buf[i] = it >> (bytes - i - 1);	\
+	}					\
+	return sane_send(fd, buf, bytes);	\
 }
 
-int proto_send_len(int fd, frame_len_t fl)
-{
-	unsigned char buf[FRAME_LEN_BYTES];
-	unsigned i;
-	for (i = 0; i < FRAME_LEN_BYTES; i++) {
-		buf[i] = fl >> (FRAME_LEN_BYTES - i - 1);
-	}
+DEF_PROTO_SEND(op, frame_op_t, FRAME_OP_BYTES)
+DEF_PROTO_SEND(len, frame_len_t, FRAME_LEN_BYTES)
 
-	return sane_send(fd, buf, FRAME_LEN_BYTES);
+#define DEF_PROTO_SEND_FARRAY(name, struct_n, field)		\
+int proto_send_##name(int fd, struct_n *it)			\
+{								\
+	return sane_send(fd, it->field, sizeof(it->field));	\
 }
 
-int proto_send_valid_num(int fd, valid_num_t *vn)
-{
-	return -1;
-}
-
-int proto_send_ident_num(int fd, ident_num_t *in)
-{
-	return -1;
-}
+DEF_PROTO_SEND_FARRAY(valid_num, valid_num_t, data)
+DEF_PROTO_SEND_FARRAY(ident_num, ident_num_t, data)
 
 int proto_frame_op(int fd, frame_op_t op)
 {

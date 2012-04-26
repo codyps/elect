@@ -95,9 +95,9 @@ static void *ctf_con_th(void *v_arg)
 			continue;
 		}
 
-		frame_len_t frame_len = decode_len(buf);
-		if (frame_len > sizeof(buf) - FRAME_LEN_BYTES
-				|| frame_len < FRAME_OP_BYTES) {
+		frame_len_t frame_len  = proto_decode_len(buf);
+		size_t whole_frame_len = frame_len + FRAME_LEN_BYTES;
+		if (whole_frame_len > sizeof(buf) || frame_len < FRAME_OP_BYTES) {
 			con_prt(arg, "frame has bad len: %u\n", frame_len);
 			/* close and die, do
 			 * not attempt to recover from possible
@@ -112,7 +112,7 @@ static void *ctf_con_th(void *v_arg)
 		}
 
 		/* we have a frame */
-		frame_op_t op = decode_op(buf);
+		frame_op_t op = proto_decode_op(buf + FRAME_LEN_BYTES);
 
 		unsigned char *payload = buf + FRAME_LEN_BYTES + FRAME_OP_BYTES;
 		size_t     payload_len = frame_len - FRAME_OP_BYTES;
@@ -120,7 +120,7 @@ static void *ctf_con_th(void *v_arg)
 		switch(op) {
 		case OP_VOTE: {
 			struct vote v;
-			int r = decode_vote(payload, payload_len, &v);
+			int r = proto_decode_vote(payload, payload_len, &v);
 			if (r) {
 				con_prt(arg, "decode_vote: fail: %d\n", r);
 				int p = proto_frame_op(cfd, OP_FAIL);
@@ -159,7 +159,6 @@ static void *ctf_con_th(void *v_arg)
 		}
 
 		// handle packet advancing.
-		size_t whole_frame_len = frame_len + FRAME_LEN_BYTES;
 		size_t left_len = buf_occ - whole_frame_len;
 		memmove(buf, buf + whole_frame_len, left_len);
 		need_more = false;
