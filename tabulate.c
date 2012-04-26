@@ -20,6 +20,7 @@ static void vote_rec_init(struct vote_rec *vr, struct ballot_option *ba)
 	vr->opt = bo_ref_inc(ba);
 	vr->vote_count = 0;
 	list_init(&vr->ident_nums);
+	list_init(&vr->l);
 }
 
 static void valid_num_rec_init(
@@ -27,7 +28,7 @@ static void valid_num_rec_init(
 		valid_num_t *vn)
 {
 	memcpy(&vnr->vn, vn, sizeof(*vn));
-	vnr->used = false;
+	list_init(&vnr->l);
 }
 
 static int valid_num_cmp(struct valid_num_rec *r1, struct valid_num_rec *r2)
@@ -116,7 +117,8 @@ static int vs_add_vote(struct vote_store *vs, struct vote *v)
 		free(vr);
 	} else {
 		/* number of `vote_rec`s increased */
-		vs->ct++;
+		vs->vote_recs++;
+		list_add(&vs->vr_list, &res->l);
 	}
 
 	vs->votes ++;
@@ -145,9 +147,11 @@ unsigned tabu_vote_ct(tabu_t *tab)
 
 static int vote_store_init(struct vote_store *vs)
 {
-	vs->ct    = 0;
-	vs->votes = 0;
-	vs->root  = NULL;
+	vs->vote_recs = 0;
+	vs->votes     = 0;
+	vs->root      = NULL;
+
+	list_init(&vs->vr_list);
 	return 0;
 }
 
@@ -155,6 +159,7 @@ static int valid_num_store_init(struct valid_num_store *vns)
 {
 	vns->ct = 0;
 	vns->root = NULL;
+	list_init(&vns->used);
 	return 0;
 }
 
@@ -183,28 +188,57 @@ int tabu_insert_vote(tabu_t *t, struct vote *v)
 		return TABU_BAD_VALIDATION;
 	}
 
-	if (vnr->used) {
+	if (!list_is_empty(&vnr->l)) {
 		pthread_mutex_unlock(&t->mut);
 		return TABU_ALREADY_VOTED;
 	}
+
 
 	/* add vote */
 	int r = vs_add_vote(&t->vs, v);
 
 	if (!r) {
-		vnr->used = true;
+		/* mark the vnum as used */
+		list_add(&t->vns.used, &vnr->l);
 	}
 
 	pthread_mutex_unlock(&t->mut);
 	return r;
 }
 
+/*
 int tabu_for_each_vote_rec(tabu_t *tab, vote_rec_cb cb, void *pdata)
 {
 	return -1;
 }
+*/
 
-int tabu_for_each_valid_num_rec(tabu_t *tab, valid_num_rec_cb cb, void *pdata)
+int tabu_for_each_vote_rec(tabu_t *tab, vote_rec_cb cb, void *pdata)
 {
-	return -1;
+	pthread_mutex_lock(&tab->mut);
+	struct vote_rec *vr;
+	list_for_each_entry(vr, &tab->vs.vr_list, l) {
+		int r = cb(vr, pdata);
+		if (r) {
+			pthread_mutex_unlock(&tab->mut);
+			return r;
+		}
+	}
+	pthread_mutex_unlock(&tab->mut);
+	return 0;
+}
+
+int tabu_for_each_voted_valid_num_rec(tabu_t *tab, valid_num_rec_cb cb, void *pdata)
+{
+	pthread_mutex_lock(&tab->mut);
+	struct valid_num_rec *vnr;
+	list_for_each_entry(vnr, &tab->vns.used, l) {
+		int r = cb(vnr, pdata);
+		if (r) {
+			pthread_mutex_unlock(&tab->mut);
+			return r;
+		}
+	}
+	pthread_mutex_unlock(&tab->mut);
+	return 0;
 }

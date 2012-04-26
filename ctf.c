@@ -24,12 +24,39 @@
 #include <unistd.h>
 
 
+struct src_arg {
+	struct con_arg *arg;
+	bool is_first;
+}
+
+static int send_results_cb(struct vote_rec *vr, void *pdata)
+{
+	struct src_arg *sarg = pdata;
+	int cfd = sarg->arg->cfd;
+
+	if (sarg->is_first) {
+		sarg->is_first = false;
+		proto_send_len(cfd, FRAME_OP_BYTES + FRAME_LEN_BYTES);
+		proto_send_op(cfd, OP_BALLOT_OPTION_CT);
+		proto_send_len(cfd, tabu_ballot_option_ct(tab));
+	}
+
+	/*                      op      number of votes   ident nums         */
+	proto_send_len(cfd, FRAME_OP_BYTES + FRAME_LEN_BYTES + IDENT_NUM_BYTES * vr->vote_count
+			/* ballot option */
+		       + vr->opt->len);
+
+	/* TODO: send all ident_nums */
+
+	/* TODO: send ballot option */
+
+	return 0;
+}
+
 static int send_voters_cb(struct valid_num_rec *vnr, void *pdata)
 {
 	struct con_arg *arg = pdata;
-	if (vnr->used) {
-		proto_send_valid_num(arg->cfd, &vnr->vn);
-	}
+	proto_send_valid_num(arg->cfd, &vnr->vn);
 	return 0;
 }
 
@@ -70,13 +97,20 @@ static int ctf_handle_packet(struct con_arg *arg, frame_op_t op,
 	}
 		break;
 	case OP_REQ_RESULTS:
-		// TODO: send results.
+		/* send results. */
+		/* for each ballot option */
+		struct src_arg sarg = {
+			.arg = arg,
+			.is_first = true
+		};
+		tabu_for_each_vote_rec(tab, send_results_cb, &sarg);
+
 		break;
 	case OP_REQ_VOTERS:
-		// TODO: send voters.
+		/* send voters. */
 		proto_send_len(cfd, FRAME_OP_BYTES + tabu_vote_ct(tab) * VALID_NUM_BYTES);
 		proto_send_op (cfd, OP_VOTERS);
-		tabu_for_each_valid_num_rec(tab, send_voters_cb, arg);
+		tabu_for_each_voted_valid_num_rec(tab, send_voters_cb, arg);
 		break;
 	}
 

@@ -50,20 +50,35 @@ static void *con_th(void *v_arg)
 	for (;;) {
 		if (buf_occ + 1 > sizeof(buf)) {
 			con_prt(arg, "overfilled buffer\n");
-			/* FIXME: bailout (cleanup?) */
+			/* bailout */
 			break;
 		}
 
 		if (need_more) {
 			ssize_t r = recv(cfd, buf + buf_occ, sizeof(buf) - buf_occ, 0);
 			if (r == -1) {
-				con_prt(arg, "recv failed %d\n", errno);
+				con_prt(arg, "recv failed: %s\n", strerror(errno));
 				/* FIXME: bailout as needed */
+				switch(errno) {
+				case ECONNREFUSED:
+				case EFAULT:
+				case EBADF:
+				case EINVAL:
+				case ENOMEM:
+				case ENOTCONN:
+				case ENOTSOCK:
+					/* some error we can't handle. */
+					goto e_shutdown;
+
+				case EINTR:
+					/* retry */
+					break;
+				}
 				continue;
 			} else if (r == 0) {
-				con_prt(arg, "recv got 0, %d\n", errno);
-				/* FIXME: handle */
-				continue;
+				con_prt(arg, "recv got 0: %s\n", strerror(errno));
+				/* assuming the other end broke the connection */
+				goto e_shutdown;
 			}
 			buf_occ += r;
 		}

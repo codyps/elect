@@ -12,11 +12,9 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	struct addrinfo *cla_ai;
-	int r = tcpw_resolve_as_client("cla", argv[1], argv[2], &cla_ai);
-	if (r)
+	int fd = tcpw_resolve_and_connect("cla", argv[1], argv[2]);
+	if (fd < 0)
 		return 2;
-
 
 
 

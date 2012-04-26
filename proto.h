@@ -45,8 +45,13 @@ enum {
 	OP_REQ_VOTERS,  /* serviced by CTF */
 	OP_VOTERS,	/* reply from CTF */
 	OP_REQ_RESULTS, /* serviced by CTF */
-	OP_RESULTS	/* reply from CTF */
+	OP_RESULTS,	/* reply from CTF */
 
+	/* CLA */
+	OP_REQ_VNUM,	/* serviced by CLA */
+	OP_VNUM,	/* responce */
+	OP_REQ_VOTER_NAMES, /* service */
+	OP_VOTER_NAMES      /* responce */
 };
 
 /* sends a simple frame containing only an op */
