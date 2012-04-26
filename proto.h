@@ -64,6 +64,9 @@ int proto_send_len(int fd, frame_len_t len);
 /* serializes a op, proto_send_len must be used prior. */
 int proto_send_op(int fd, frame_op_t op);
 
+/* the op that only contains a vnum */
+int proto_frame_vnum(int fd, valid_num_t *vn);
+
 int proto_send_valid_num(int fd, valid_num_t const *vn);
 int proto_send_ident_num(int fd, ident_num_t const *in);
 int proto_send_ballot_option(int fd, struct ballot_option const *opt);

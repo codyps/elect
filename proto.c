@@ -122,6 +122,26 @@ int proto_frame_op(int fd, frame_op_t op)
 	return proto_send_op (fd, op);
 }
 
+int proto_frame_vnum(int fd, valid_num_t *vn)
+{
+	int r = proto_send_len(fd, FRAME_OP_BYTES + VALID_NUM_BYTES);
+	if (r) {
+		return 1;
+	}
+
+	r = proto_send_op(fd, OP_VNUM);
+	if (r) {
+		return 2;
+	}
+
+	r = proto_send_valid_num(fd, vn);
+	if (r) {
+		return 3;
+	}
+
+	return 0;
+}
+
 int  cla_get_vnum(int fd, char const *name, char const *pass, valid_num_t *vn)
 {
 	/* FIXME */

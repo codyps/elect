@@ -15,6 +15,7 @@
 #include "warn.h"
 #include "tcp.h"
 #include "proto.h"
+#include "list.h"
 
 #include "pthread_helper.h"
 #include "accept_spawn.h"
@@ -25,14 +26,21 @@
 #include <unistd.h>
 
 struct voter_rec {
+	struct list_head l;
+
 	char *name;
+	size_t name_len;
+
 	char *pass;
+	size_t pass_len;
+
 	valid_num_t vn;
 	bool has_voted;
 };
 
 struct voters {
 	void *root;
+	void *root_by_vn;
 	unsigned ct;
 	struct list_head v_list;
 };
@@ -45,7 +53,7 @@ struct pcc_arg {
 	pthread_t th;
 };
 
-int voter_rec_cmp_by_vn(struct voter_rec *v1, struct voter_rec *v2)
+int voter_vn_cmp(struct voter_rec *v1, struct voter_rec *v2)
 {
 	return memcmp(&v1->vn, &v2->vn, sizeof(v2->vn));
 }
@@ -53,11 +61,12 @@ int voter_rec_cmp_by_vn(struct voter_rec *v1, struct voter_rec *v2)
 struct voter_rec *voters_find_by_vn(struct voters *v, valid_num_t *vn)
 {
 	struct voter_rec vr;
+	memset(&vr, 0, sizeof(vr));
 	memcpy(&vr.vn, vn, sizeof(vn));
 
 	struct voter_rec **res = (struct voter_rec **)tfind(&vr,
-			&v->root,
-			(comparison_fn_t)voter_rec_cmp_by_vn);
+			&v->root_by_vn,
+			(comparison_fn_t)voter_vn_cmp);
 
 	if (!res) {
 		/* is new... */
@@ -68,13 +77,63 @@ struct voter_rec *voters_find_by_vn(struct voters *v, valid_num_t *vn)
 	return *res;
 }
 
+static int voter_name_cmp(struct voter_rec *v1, struct voter_rec *v2)
+{
+	return strcmp(v1->name, v2->name);
+}
+
+static struct voter_rec *voters_find_by_name(struct voters const *v,
+		unsigned char const *name, size_t name_len)
+{
+	struct voter_rec vr;
+	memset(&vr, 0, sizeof(vr));
+	vr.name = (char *)name;
+	vr.name_len = name_len;
+
+	struct voter_rec **res = (struct voter_rec **)tfind(
+			&vr,
+			v->root,
+			(comparison_fn_t)voter_name_cmp);
+
+	if (!res) {
+		/* does not exsist */
+		return NULL;
+	}
+
+	/* new */
+	return *res;
+}
+
+static int voters_add_voter(struct voters *vs, struct voter_rec *vr)
+{
+	struct voter_rec *res = *(struct voter_rec **)tsearch(
+			vr,
+			vs->root,
+			(comparison_fn_t)voter_name_cmp);
+
+	struct voter_rec *res2 = *(struct voter_rec **)tsearch(
+			vr,
+			vs->root_by_vn,
+			(comparison_fn_t)voter_vn_cmp);
+
+	if (res != vr || res2 != vr) {
+		/* already exsists */
+		return 1;
+	}
+
+	/* new */
+	list_add(&vs->v_list, &res->l);
+	vs->ct ++;
+	return 0;
+}
+
 static void *periodic_voters_ctf(void *v_arg)
 {
 	/* update our knowledge of who voted */
 	struct pcc_arg *arg = v_arg;
 
 	for(;;) {
-		sleep(5);
+		sleep(2);
 
 		int fd = tcpw_connect("ctf", arg->ctf_addr, arg->ctf_port, arg->ctf_ai);
 		if (fd < 0)
@@ -148,29 +207,9 @@ clean_fd:
 	return NULL;
 }
 
-static int voter_name_cmp(struct voter_rec *v1, struct voter_rec *v2)
-{
-	return strcmp(v1->name, v2->name);
-}
 
-static int voters_add_voter(struct voters *vs, struct voter_rec *vr)
-{
-	struct voter_rec *res = *(struct voter_rec **)tsearch(
-			vr,
-			vs->root,
-			(comparison_fn_t)voter_name_cmp);
-
-	if (res != vr) {
-		/* already exsists */
-		return 1;
-	}
-
-	/* new */
-	vs->ct ++;
-	return 0;
-}
-
-static int read_auth_line(struct voter_rec *vr, char *line, size_t line_len)
+static int read_auth_line(struct voter_rec *vr, char *line,
+		__attribute__((__unused__)) size_t line_len)
 {
 	char *pass = line;
 	char *name   = strsep(&pass, "\t");
@@ -178,12 +217,14 @@ static int read_auth_line(struct voter_rec *vr, char *line, size_t line_len)
 		return 1;
 	}
 
-
 	vr->name = name;
+	vr->name_len = strlen(name);
 	vr->pass = pass;
+	vr->pass_len = strlen(pass);
 	w_prt("name: %s pass: %s\n", name, pass);
 	valid_num_init(&vr->vn);
 	vr->has_voted = false;
+	list_init(&vr->l);
 
 	return 0;
 }
@@ -191,6 +232,7 @@ static int read_auth_line(struct voter_rec *vr, char *line, size_t line_len)
 static void voters_init(struct voters *vs)
 {
 	vs->root = NULL;
+	vs->root_by_vn = NULL;
 	vs->ct   = 0;
 	list_init(&vs->v_list);
 }
@@ -258,14 +300,61 @@ static int read_auth_file(struct voters *vs, char *fname)
 
 static int send_voters_to_ctf(struct addrinfo *ai, struct voters *vs)
 {
+	/* TODO: impl */
 	return -1;
 }
+
 
 static int cla_handle_packet(struct con_arg *arg, frame_op_t op,
 		unsigned char *payload, size_t payload_len)
 {
+	struct voters *vs = arg->pdata;
+
 	switch(op) {
+	case OP_REQ_VNUM: {
+		if (payload_len < FRAME_LEN_BYTES + 1 + FRAME_LEN_BYTES + 1) {
+			w_prt("vnum request too short: %d\n", payload_len);
+			return 1;
+		}
+
+		frame_len_t name_len = proto_decode_len(payload);
+		unsigned char *name = payload;
+
+		frame_len_t pass_len = proto_decode_len(payload + name_len);
+		unsigned char *pass = name + name_len;
+
+		struct voter_rec *vr = voters_find_by_name(vs, name, name_len);
+		if (!vr) {
+			name[name_len + 1] = '\0'; /* will overwrite a part of "pass len" */
+			w_prt("got a req for invalid voter: %s\n", name);
+			return 1;
+		}
+
+		if (vr->pass_len != pass_len) {
+			w_prt("invalid password");
+			return 1;
+		}
+
+		if (!memcmp(vr->pass, pass, pass_len)) {
+			w_prt("invalid password");
+			return 1;
+		}
+
+		/* validated, give out vnum */
+		int r = proto_frame_vnum(arg->cfd, &vr->vn);
+		if (r) {
+			w_prt("failed to send vnum\n");
+			return 1;
+		}
+		return 0;
+	}
+		break;
+	case OP_REQ_VOTER_NAMES:
+		/* TODO: XXX: */
+
+		break;
 	default:
+		w_prt("unknown op: %d\n", op);
 		return 1;
 	}
 
@@ -328,5 +417,5 @@ int main(int argc, char *argv[])
 		return 7;
 	}
 
-	return accept_spawn_loop(tl, cla_handle_packet, NULL);
+	return accept_spawn_loop(tl, cla_handle_packet, &vs);
 }
