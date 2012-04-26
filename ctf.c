@@ -14,6 +14,7 @@
 #include "proto.h"
 #include "ballot.h"
 #include "tabulate.h"
+#include "pthread_helper.h"
 
 #include <string.h>
 #include <errno.h>
@@ -186,32 +187,17 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	int tl = tcpw_bind(argv[1], argv[2]);
+	int tl = tcpw_listen(argv[1], argv[2]);
 	if (tl == -1) {
 		return 3;
 	}
 
-	int r = listen(tl, 128);
-	if (r == -1) {
-		w_prt("failed to start listening: %s\n", strerror(errno));
-		return 4;
-	}
-
 	pthread_attr_t th_attr;
-	r = pthread_attr_init(&th_attr);
-	if (r) {
-		w_prt("pthread_attr_init: %s\n", strerror(r));
+	if (c_pthread_attr_init_detach(&th_attr))
 		return 5;
-	}
-
-	r = pthread_attr_setdetachstate(&th_attr, PTHREAD_CREATE_DETACHED);
-	if (r) {
-		w_prt("pthread_attr_setdetachstate: %s\n", strerror(r));
-		return 6;
-	}
 
 	tabu_t tab;
-	r = tabu_init(&tab);
+	int r = tabu_init(&tab);
 	if (r) {
 		w_prt("tabu_init: %s\n", strerror(r));
 		return 7;

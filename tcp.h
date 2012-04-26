@@ -32,5 +32,5 @@ int tcpw_connect(char const *nick,
 int tcpw_resolve_and_connect(char const *nick,
 		char const *addr,
 		char const *port);
-int tcpw_bind(char const *addr, char const *port);
+int tcpw_listen(char const *addr, char const *port);
 #endif

@@ -103,7 +103,7 @@ int tcpw_resolve_as_client(char const *nick, char const *addr, char const *port,
 	return 0;
 }
 
-int tcpw_bind(char const *addr, char const *port)
+int tcpw_listen(char const *addr, char const *port)
 {
 	struct addrinfo *res;
 	int r = tcp_resolve_listen(addr, port, &res);
@@ -120,6 +120,12 @@ int tcpw_bind(char const *addr, char const *port)
 	if (tl == -1) {
 		w_prt("could create listener [%s]:%s : %s\n",
 				addr, port, strerror(errno));
+		return -1;
+	}
+
+	r = listen(tl, 128);
+	if (r == -1) {
+		w_prt("failed to start listening: %s\n", strerror(errno));
 		return -1;
 	}
 

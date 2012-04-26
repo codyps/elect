@@ -16,6 +16,8 @@
 #include "tcp.h"
 #include "proto.h"
 
+#include "pthread_helper.h"
+
 #include <pthread.h>
 #include <search.h>
 #include <stdbool.h>
@@ -210,16 +212,9 @@ int main(int argc, char *argv[])
 	}
 
 	pthread_attr_t th_attr;
-	r = pthread_attr_init(&th_attr);
+	r = c_pthread_attr_init_detach(&th_attr);
 	if (r) {
-		w_prt("pthread_attr_init: %s\n", strerror(r));
 		return 5;
-	}
-
-	r = pthread_attr_setdetachstate(&th_attr, PTHREAD_CREATE_DETACHED);
-	if (r) {
-		w_prt("pthread_attr_setdetachstate: %s\n", strerror(r));
-		return 6;
 	}
 
 	struct pcc_arg pa = {
@@ -242,15 +237,9 @@ int main(int argc, char *argv[])
 	}
 
 
-	int tl = tcpw_bind(argv[1], argv[2]);
+	int tl = tcpw_listen(argv[1], argv[2]);
 	if (tl == -1) {
 		return 3;
-	}
-
-	r = listen(tl, 128);
-	if (r == -1) {
-		w_prt("failed to start listening: %s\n", strerror(errno));
-		return 4;
 	}
 
 	/* cla listen loop. use ctf's as a model */
