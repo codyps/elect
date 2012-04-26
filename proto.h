@@ -75,6 +75,5 @@ int         proto_decode_vote(unsigned char *buf, size_t len, struct vote *res);
 int  cla_get_vnum( int fd, char const *name, char const *pass, valid_num_t *vn);
 int  ctf_send_vote(int fd, char const *vote,
 		valid_num_t const *vn, ident_num_t const *in);
-void ident_num_init(ident_num_t *in);
 
 #endif

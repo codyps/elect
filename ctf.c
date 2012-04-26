@@ -36,7 +36,7 @@ static int send_results_cb(struct vote_rec *vr, void *pdata)
 	int cfd = sarg->arg->cfd;
 
 	if (sarg->is_first) {
-		/* send the number of options */
+		/* send the number of options prior to any other data. */
 		sarg->is_first = false;
 		proto_send_len(cfd, FRAME_OP_BYTES + FRAME_LEN_BYTES);
 		proto_send_op(cfd, OP_BALLOT_OPTION_CT);

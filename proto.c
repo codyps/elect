@@ -118,14 +118,6 @@ int proto_frame_op(int fd, frame_op_t op)
 	return proto_send_op (fd, op);
 }
 
-void ident_num_init(ident_num_t *in)
-{
-	unsigned i;
-	for (i = 0; i < IDENT_NUM_BYTES; i++) {
-		in->data[i] = rand();
-	}
-}
-
 int  cla_get_vnum(int fd, char const *name, char const *pass, valid_num_t *vn)
 {
 	/* FIXME */

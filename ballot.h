@@ -1,7 +1,8 @@
 #ifndef BALLOT_H_
 #define BALLOT_H_
 
-#include <stdlib.h>
+#include <stdio.h>  /* FILE */
+#include <stdlib.h> /* size_t */
 
 #define VALID_NUM_BYTES 16 /* 128 bit */
 #define IDENT_NUM_BYTES 16 /* 128 bit */
@@ -24,5 +25,10 @@ struct ballot_option {
 	size_t len;
 	unsigned char data[];
 };
+
+void ident_num_init(ident_num_t *in);
+void ident_num_print(ident_num_t *in, FILE *out);
+
+
 
 #endif
