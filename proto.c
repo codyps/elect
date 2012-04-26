@@ -70,7 +70,7 @@ static int sane_send(int fd, void *buf, size_t len)
 		return -1;
 	} else if (r == 0) {
 		return 1;
-	} else if (r != len) {
+	} else if (r != (ssize_t)len) {
 		return -2;
 	}
 
