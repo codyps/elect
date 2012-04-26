@@ -186,23 +186,12 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	struct addrinfo *res;
-	int r = tcp_resolve_listen(argv[1], argv[2], &res);
-
-	if (r) {
-		/* error resolving. */
-		w_prt("listen addr resolve error: %s\n", tcp_resolve_strerror(r));
-		return 2;
-	}
-
-	int tl = tcp_bind(res);
-	freeaddrinfo(res);
+	int tl = tcpw_bind(argv[1], argv[2]);
 	if (tl == -1) {
-		w_prt("could create listener: %s\n", strerror(errno));
 		return 3;
 	}
 
-	r = listen(tl, 128);
+	int r = listen(tl, 128);
 	if (r == -1) {
 		w_prt("failed to start listening: %s\n", strerror(errno));
 		return 4;

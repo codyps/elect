@@ -51,9 +51,9 @@ int tcp_resolve_as_client(
 	return getaddrinfo(node, service, &hints, res);
 }
 
-int tcp_bind(struct addrinfo *ai)
+int tcp_bind(struct addrinfo const *ai)
 {
-	struct addrinfo *rp;
+	struct addrinfo const *rp;
 	for (rp = ai; rp != NULL; rp = rp->ai_next) {
 		int sfd = socket(ai->ai_family, ai->ai_socktype,
 				ai->ai_protocol);
@@ -70,9 +70,9 @@ int tcp_bind(struct addrinfo *ai)
 	return -1;
 }
 
-int tcp_connect(struct addrinfo *ai)
+int tcp_connect(struct addrinfo const *ai)
 {
-	struct addrinfo *rp;
+	struct addrinfo const *rp;
 	for (rp = ai; rp != NULL; rp = rp->ai_next) {
 		int sfd = socket(ai->ai_family, ai->ai_socktype,
 				ai->ai_protocol);
@@ -103,8 +103,31 @@ int tcpw_resolve_as_client(char const *nick, char const *addr, char const *port,
 	return 0;
 }
 
+int tcpw_bind(char const *addr, char const *port)
+{
+	struct addrinfo *res;
+	int r = tcp_resolve_listen(addr, port, &res);
+	if (r) {
+		/* error resolving. */
+		w_prt("listen addr resolve [%s]:%s failed: %s\n",
+				addr, port,
+				tcp_resolve_strerror(r));
+		return -1;
+	}
+
+	int tl = tcp_bind(res);
+	freeaddrinfo(res);
+	if (tl == -1) {
+		w_prt("could create listener [%s]:%s : %s\n",
+				addr, port, strerror(errno));
+		return -1;
+	}
+
+	return tl;
+}
+
 int tcpw_connect(char const *nick, char const *addr, char const *port,
-		struct addrinfo *ai)
+		struct addrinfo const *ai)
 {
 	int fd = tcp_connect(ai);
 	if (fd == -1) {

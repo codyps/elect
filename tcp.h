@@ -12,14 +12,14 @@ int tcp_resolve_listen(
 
 #define tcp_resolve_strerror(e) gai_strerror(e)
 
-int tcp_bind(struct addrinfo *ai);
+int tcp_bind(struct addrinfo const *ai);
 
 int tcp_resolve_as_client(
 		char const *node,
 		char const *service,
 		struct addrinfo **res);
 
-int tcp_connect(struct addrinfo *ai);
+int tcp_connect(struct addrinfo const *ai);
 
 /* helper functions which print warnings */
 int tcpw_resolve_as_client(char const *nick,
@@ -28,9 +28,9 @@ int tcpw_resolve_as_client(char const *nick,
 int tcpw_connect(char const *nick,
 		char const *addr,
 		char const *port,
-		struct addrinfo *ai);
+		struct addrinfo const *ai);
 int tcpw_resolve_and_connect(char const *nick,
 		char const *addr,
 		char const *port);
-
+int tcpw_bind(char const *addr, char const *port);
 #endif

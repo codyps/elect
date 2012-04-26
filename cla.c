@@ -241,19 +241,9 @@ int main(int argc, char *argv[])
 		return 6;
 	}
 
-	struct addrinfo *res;
-	r = tcp_resolve_listen(argv[1], argv[2], &res);
 
-	if (r) {
-		/* error resolving. */
-		w_prt("listen addr resolve error: %s\n", tcp_resolve_strerror(r));
-		return 2;
-	}
-
-	int tl = tcp_bind(res);
-	freeaddrinfo(res);
+	int tl = tcpw_bind(argv[1], argv[2]);
 	if (tl == -1) {
-		w_prt("could create listener: %s\n", strerror(errno));
 		return 3;
 	}
 
