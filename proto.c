@@ -36,6 +36,7 @@ frame_op_t proto_decode_op(unsigned char *buf)
 	return o;
 }
 
+
 int proto_decode_vote(unsigned char *buf, size_t len, struct vote *res)
 {
 	if (len < VALID_NUM_BYTES + IDENT_NUM_BYTES + 1) {
@@ -100,10 +101,13 @@ int proto_send_##name(int fd, struct_n const *it)			\
 DEF_PROTO_SEND_FARRAY(valid_num, valid_num_t, data)
 DEF_PROTO_SEND_FARRAY(ident_num, ident_num_t, data)
 
-#define DEF_PROTO_SEND_EARRAY(name, struct_n, data_field, size_field)\
+#define DEF_PROTO_SEND_EARRAY(name, struct_n, data_field, size_field)	\
 int proto_send_##name(int fd, struct_n const *it)			\
-{								\
-	return sane_send(fd, it->data_field, it->size_field);	\
+{									\
+	int r = proto_send_len(fd, it->size_field);			\
+	if (r)								\
+		return 1;						\
+	return sane_send(fd, it->data_field, it->size_field);		\
 }
 
 DEF_PROTO_SEND_EARRAY(ballot_option, struct ballot_option, data, len)

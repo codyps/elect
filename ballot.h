@@ -29,6 +29,8 @@ struct ballot_option {
 void ident_num_init(ident_num_t *in);
 void ident_num_print(ident_num_t *in, FILE *out);
 
+struct ballot_option *ballot_option_create(size_t len);
+void ballot_option_print(struct ballot_option *bo, FILE *out);
 
 
 #endif

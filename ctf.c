@@ -43,21 +43,21 @@ static int send_results_cb(struct vote_rec *vr, void *pdata)
 		proto_send_len(cfd, tab->vs.vote_recs);
 	}
 
-	/*                      op      number of votes   ident nums         */
-	proto_send_len(cfd, FRAME_OP_BYTES + FRAME_LEN_BYTES + IDENT_NUM_BYTES * vr->vote_count
-			/* ballot option */
-		       + vr->opt->len);
+	/*                |     op         | bo len          | bo          | */
+	proto_send_len(cfd, FRAME_OP_BYTES + FRAME_LEN_BYTES + vr->opt->len
+			/* ident nums                     */
+			+  IDENT_NUM_BYTES * vr->vote_count);
 
 	proto_send_op(cfd, OP_RESULTS);
+
+	/* send ballot option */
+	proto_send_ballot_option(cfd, vr->opt);
 
 	/* send all ident_nums */
 	struct ident_num_rec *inr;
 	list_for_each_entry(inr, &vr->ident_nums, l) {
 		proto_send_ident_num(cfd, &inr->id);
 	}
-
-	/* send ballot option */
-	proto_send_ballot_option(cfd, vr->opt);
 
 	return 0;
 }

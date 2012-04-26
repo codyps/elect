@@ -51,7 +51,7 @@ enum {
 	/* CLA */
 	OP_REQ_VNUM,	/* serviced by CLA */
 	OP_VNUM,	/* responce */
-	OP_REQ_VOTER_NAMES, /* service */
+	OP_REQ_VOTER_NAMES,  /* service */
 	OP_VOTER_NAMES,      /* responce */
 };
 
