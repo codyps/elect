@@ -1,3 +1,5 @@
+#include "warn.h"
+
 #include "proto.h"
 
 #include <string.h>
@@ -88,6 +90,11 @@ static int sane_send(int fd, void const *buf, size_t len)
 	return 0;
 }
 
+int proto_send_bytes(int fd, void const *buf, size_t len)
+{
+	return sane_send(fd, buf, len);
+}
+
 #define DEF_PROTO_SEND(name, type, bytes)	\
 int proto_send_##name(int fd, type it)		\
 {						\
@@ -124,8 +131,9 @@ DEF_PROTO_SEND_EARRAY(ballot_option, struct ballot_option, data, len)
 
 int proto_frame_op(int fd, frame_op_t op)
 {
-	int r = proto_send_len(fd, sizeof(op));
+	int r = proto_send_len(fd, FRAME_OP_BYTES);
 	if (r) {
+		w_prt("proto frame op failed\n");
 		return 1;
 	}
 
@@ -152,14 +160,76 @@ int proto_frame_vnum(int fd, valid_num_t *vn)
 	return 0;
 }
 
-int  cla_get_vnum(int fd, char const *name, char const *pass, valid_num_t *vn)
+int  cla_get_vnum(int fd, char const *name, size_t name_len,
+		char const *pass, size_t pass_len, valid_num_t *vn)
 {
-	/* FIXME XXX TODO*/
-	return -1;
+	/*                    op             len of name       name        pass */
+	proto_send_len(fd, FRAME_OP_BYTES + FRAME_LEN_BYTES + name_len + pass_len);
+	proto_send_op(fd, OP_REQ_VNUM);
+	proto_send_len(fd, name_len);
+
+	proto_send_bytes(fd, name, name_len);
+	proto_send_bytes(fd, pass, pass_len);
+
+	unsigned char buf[FRAME_LEN_BYTES + FRAME_OP_BYTES + VALID_NUM_BYTES];
+	ssize_t rl = recv(fd, buf, sizeof(buf), MSG_WAITALL);
+	if (rl < 0) {
+		return 1;
+	} else if (rl == 0) {
+		return 2;
+	} else if (rl != sizeof(buf)) {
+		return 3;
+	}
+
+	frame_len_t fl = proto_decode_len(buf);
+
+	if (fl != VALID_NUM_BYTES + FRAME_OP_BYTES) {
+		return 4;
+	}
+
+	frame_op_t op = proto_decode_op(buf + FRAME_LEN_BYTES);
+	if (op != OP_VNUM) {
+		return 5;
+	}
+
+	memcpy(vn->data, buf + FRAME_LEN_BYTES + FRAME_OP_BYTES, VALID_NUM_BYTES);
+
+	return 0;
 }
 
-int  ctf_send_vote(int fd, char const *vote, valid_num_t const *vn, ident_num_t const *in)
+int  ctf_send_vote(int fd, char const *vote, size_t vote_len,
+		valid_num_t const *vn, ident_num_t const *in)
 {
-	/* FIXME XXX TODO*/
-	return -1;
+	proto_send_len(fd, FRAME_OP_BYTES + VALID_NUM_BYTES + IDENT_NUM_BYTES + vote_len);
+	proto_send_op(fd, OP_VOTE);
+	proto_send_valid_num(fd, vn);
+	proto_send_ident_num(fd, in);
+	proto_send_bytes(fd, vote, vote_len);
+
+
+	unsigned char buf[FRAME_LEN_BYTES + FRAME_OP_BYTES];
+	ssize_t rl = recv(fd, buf, sizeof(buf), MSG_WAITALL);
+	if (rl < 0) {
+		return -1;
+	} else if (rl == 0) {
+		return -2;
+	} else if (rl != sizeof(buf)) {
+		return -3;
+	}
+
+	frame_len_t fl = proto_decode_len(buf);
+
+	if (fl != FRAME_OP_BYTES) {
+		return -4;
+	}
+
+	frame_op_t op = proto_decode_op(buf + FRAME_LEN_BYTES);
+
+	if (op == OP_SUCC) {
+		return 0;
+	} else if (op == OP_FAIL) {
+		return 1;
+	} else {
+		return -5;
+	}
 }

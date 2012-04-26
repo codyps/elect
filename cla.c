@@ -102,6 +102,7 @@ static struct voter_rec *voters_find_by_name(struct voters const *v,
 
 	if (!res) {
 		/* does not exsist */
+		w_prt("no such name\n");
 		return NULL;
 	}
 
@@ -155,16 +156,31 @@ static void *periodic_voters_ctf(void *v_arg)
 	struct pcc_arg *arg = v_arg;
 
 	for(;;) {
-		sleep(2);
+		//w_prt("periodic: sleeping\n");
+		sleep(5);
+
+		//w_prt("periodic: connecting\n");
 
 		int fd = tcpw_connect("ctf", arg->ctf_addr, arg->ctf_port, arg->ctf_ai);
-		if (fd < 0)
+		if (fd < 0) {
+			w_prt("periodic: failed to connect\n");
 			continue;
+		}
 
-		proto_frame_op(fd, OP_REQ_VOTERS);
+		//w_prt("periodic: connected!\n");
+
+		int r = proto_frame_op(fd, OP_REQ_VOTERS);
+		if (r) {
+			w_prt("periodic: OP_REQ_VOTERS frame failed to send.\n");
+			goto clean_fd;
+		}
+
+		//w_prt("periodic: request sent.\n");
 
 		unsigned char ct_buf[FRAME_LEN_BYTES + FRAME_OP_BYTES];
 		ssize_t ct_len = recv(fd, ct_buf, sizeof(ct_buf), MSG_WAITALL);
+
+		//w_prt("periodic: recved responce.\n");
 
 		if (ct_len < 0) {
 			w_prt("periodic voters: error on recv: %s\n", strerror(errno));
@@ -180,7 +196,7 @@ static void *periodic_voters_ctf(void *v_arg)
 
 		frame_len_t frame_len = proto_decode_len(ct_buf);
 
-		if (frame_len != FRAME_OP_BYTES + FRAME_LEN_BYTES) {
+		if (frame_len < FRAME_OP_BYTES) {
 			w_prt("periodic voters: recved bad frame_len: %llu\n", frame_len);
 			goto clean_fd;
 		}
@@ -207,6 +223,7 @@ static void *periodic_voters_ctf(void *v_arg)
 
 		size_t i;
 		for (i = 0; i < vnum_ct; i++) {
+			//w_prt("periodic: examined vnum\n");
 			valid_num_t vn;
 			ssize_t vn_r_len = recv(fd, vn.data, sizeof(vn.data), MSG_WAITALL);
 			if (vn_r_len != sizeof(vn.data)) {
@@ -239,11 +256,11 @@ static int read_auth_line(struct voter_rec *vr, char *line,
 		return 1;
 	}
 
-	vr->name = name;
+	vr->name = strdup(name);
 	vr->name_len = strlen(name);
-	vr->pass = pass;
+	vr->pass = strdup(pass);
 	vr->pass_len = strlen(pass);
-	w_prt("name: %s pass: %s\n", name, pass);
+	w_prt("name: %s %d pass: %s %d\n", name, vr->name_len, pass, vr->pass_len);
 	valid_num_init(&vr->vn);
 	vr->has_voted = false;
 	list_init(&vr->l);
@@ -346,21 +363,24 @@ static int cla_handle_packet(struct con_arg *arg, frame_op_t op,
 
 	switch(op) {
 	case OP_REQ_VNUM: {
-		if (payload_len < FRAME_LEN_BYTES + 1 + FRAME_LEN_BYTES + 1) {
+		if (payload_len < FRAME_LEN_BYTES + 1 + 1) {
 			w_prt("vnum request too short: %d\n", payload_len);
 			return 1;
 		}
 
 		frame_len_t name_len = proto_decode_len(payload);
-		unsigned char *name = payload;
+		unsigned char *name  = payload + FRAME_LEN_BYTES;
 
-		frame_len_t pass_len = proto_decode_len(payload + name_len);
-		unsigned char *pass = name + name_len;
+
+		frame_len_t pass_len = payload_len - name_len - FRAME_LEN_BYTES;
+		unsigned char *pass  = name + name_len;
+
+		w_prt("name len: %llu pass len: %llu\n", name_len, pass_len);
 
 		struct voter_rec *vr = voters_find_by_name(vs, name, name_len);
 		if (!vr) {
-			name[name_len + 1] = '\0'; /* will overwrite a part of "pass len" */
-			w_prt("got a req for invalid voter: %s\n", name);
+			name[name_len] = '\0'; /* will overwrite a part of "pass len" */
+			w_prt("got a req for invalid voter: %s %llu\n", name, name_len);
 			return 1;
 		}
 
@@ -369,7 +389,7 @@ static int cla_handle_packet(struct con_arg *arg, frame_op_t op,
 			return 1;
 		}
 
-		if (!memcmp(vr->pass, pass, pass_len)) {
+		if (memcmp(vr->pass, pass, pass_len)) {
 			w_prt("invalid password");
 			return 1;
 		}

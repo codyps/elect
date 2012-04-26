@@ -1,6 +1,7 @@
 
 #define _GNU_SOURCE
 
+#include "warn.h"
 #include "tabulate.h"
 #include "ballot.h"
 
@@ -40,6 +41,7 @@ static int vns_insert(struct valid_num_store *vns, valid_num_t *vn)
 {
 	struct valid_num_rec *vnr = malloc(sizeof(*vnr));
 	if (!vnr) {
+		w_prt("no mem.\n");
 		return -ENOMEM;
 	}
 
@@ -52,6 +54,7 @@ static int vns_insert(struct valid_num_store *vns, valid_num_t *vn)
 
 	if (res != vnr) {
 		/* already exsists */
+		w_prt("vnum already exsists\n");
 		free(vnr);
 		return TABU_ALREADY_EXISTS;
 	}
@@ -78,6 +81,14 @@ static struct valid_num_rec *vns_find_vn(
 
 	/* is old */
 	return *res;
+}
+
+bool tabu_has_results(tabu_t *tab)
+{
+	pthread_mutex_lock(&tab->mut);
+	bool r = tab->vs.vote_recs > 0;
+	pthread_mutex_unlock(&tab->mut);
+	return r;
 }
 
 int tabu_add_valid_num(tabu_t *tab, valid_num_t *vn)

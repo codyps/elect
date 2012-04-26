@@ -18,7 +18,7 @@ static int get_vnum(char *cla_addr, char *cla_port,
 		return 1;
 	}
 
-	int r = cla_get_vnum(cla_fd, name, pass, vn);
+	int r = cla_get_vnum(cla_fd, name, strlen(name), pass, strlen(pass), vn);
 	if (r) {
 		w_prt("cla get vnum failed: %d\n", r);
 		return 2;
@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
 
 	ident_num_t in;
 	ident_num_init(&in);
-	r = ctf_send_vote(ctf_fd, argv[7], &vn, &in);
+	r = ctf_send_vote(ctf_fd, argv[7], strlen(argv[7]), &vn, &in);
 	if (r) {
 		w_prt("ctf send vote failed: %d\n", r);
 		return 7;

@@ -66,6 +66,8 @@ int proto_send_op(int fd, frame_op_t op);
 /* the op that only contains a vnum */
 int proto_frame_vnum(int fd, valid_num_t *vn);
 
+int proto_send_bytes(int fd, void const *data, size_t bytes);
+
 int proto_send_valid_num(int fd, valid_num_t const *vn);
 int proto_send_ident_num(int fd, ident_num_t const *in);
 int proto_send_ballot_option(int fd, struct ballot_option const *opt);
@@ -75,8 +77,10 @@ frame_op_t  proto_decode_op(unsigned char *buf);
 int         proto_decode_vote(unsigned char *buf, size_t len, struct vote *res);
 void        proto_decode_valid_num(unsigned char *buf, valid_num_t *vn);
 
-int  cla_get_vnum( int fd, char const *name, char const *pass, valid_num_t *vn);
-int  ctf_send_vote(int fd, char const *vote,
+int  cla_get_vnum( int fd, char const *name, size_t name_len,
+		char const *pass, size_t pass_len,
+		valid_num_t *vn);
+int  ctf_send_vote(int fd, char const *vote, size_t vote_len,
 		valid_num_t const *vn, ident_num_t const *in);
 
 #endif

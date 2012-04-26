@@ -59,6 +59,7 @@ typedef int (*vote_rec_cb)(struct vote_rec *vr, void *pdata);
 typedef int (*valid_num_rec_cb)(struct valid_num_rec *vnr, void *pdata);
 
 //int tabu_for_each_valid_num_rec(tabu_t *tab, valid_num_rec_cb cb, void *pdata);
+bool tabu_has_results(tabu_t *tab);
 int tabu_for_each_vote_rec(tabu_t *tab, vote_rec_cb cb, void *pdata);
 int tabu_for_each_voted_valid_num_rec(tabu_t *tab, valid_num_rec_cb cb, void *pdata);
 

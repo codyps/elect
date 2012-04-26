@@ -112,7 +112,13 @@ static int ctf_handle_packet(struct con_arg *arg, frame_op_t op,
 			.arg = arg,
 			.is_first = true
 		};
-		tabu_for_each_vote_rec(tab, send_results_cb, &sarg);
+		if (tabu_has_results(tab)) {
+			tabu_for_each_vote_rec(tab, send_results_cb, &sarg);
+		} else {
+			proto_send_len(cfd, FRAME_OP_BYTES + FRAME_LEN_BYTES);
+			proto_send_op(cfd, OP_BALLOT_OPTION_CT);
+			proto_send_len(cfd, 0);
+		}
 	}
 		break;
 	case OP_REQ_VOTERS:
@@ -125,7 +131,12 @@ static int ctf_handle_packet(struct con_arg *arg, frame_op_t op,
 		/* add vnum to list */
 		valid_num_t vn;
 		proto_decode_valid_num(payload, &vn);
-		tabu_add_valid_num(tab, &vn);
+		int r = tabu_add_valid_num(tab, &vn);
+		if (r) {
+			w_prt("failed to add vnum\n");
+		} else {
+			//w_prt("added vnum.\n");
+		}
 	}
 		break;
 	default:

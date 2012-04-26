@@ -47,6 +47,8 @@ static void *con_th(void *v_arg)
 	size_t buf_occ = 0;
 	bool need_more = true;
 
+	con_prt(arg, "opened\n");
+
 	for (;;) {
 		if (buf_occ + 1 > sizeof(buf)) {
 			con_prt(arg, "overfilled buffer\n");
@@ -81,10 +83,15 @@ static void *con_th(void *v_arg)
 				goto e_shutdown;
 			}
 			buf_occ += r;
+
+			//con_prt(arg, "recved %d bytes, %d bytes buffered\n", r, buf_occ);
 		}
 
 		if (buf_occ < FRAME_LEN_BYTES + FRAME_OP_BYTES) {
 			/* minimal frame has only LEN & OP */
+			//con_prt(arg, "need at least %d bytes, have %d\n",
+			//		FRAME_LEN_BYTES + FRAME_OP_BYTES,
+			//		buf_occ);
 			need_more = true;
 			continue;
 		}
@@ -100,6 +107,9 @@ static void *con_th(void *v_arg)
 		}
 
 		if (buf_occ < (frame_len + FRAME_LEN_BYTES)) {
+			//con_prt(arg, "need %d bytes, have %d\n",
+			//		frame_len + FRAME_LEN_BYTES,
+			//		buf_occ);
 			/* not enough data to complete frame */
 			need_more = true;
 			continue;
@@ -111,6 +121,8 @@ static void *con_th(void *v_arg)
 		unsigned char *payload = buf + FRAME_LEN_BYTES + FRAME_OP_BYTES;
 		size_t     payload_len = frame_len - FRAME_OP_BYTES;
 
+		con_prt(arg, "handle op %d with len %zu\n", op, payload_len);
+
 		int r = arg->handle_packet(arg, op, payload, payload_len);
 		if (r) {
 			con_prt(arg, "packet handler requested shutdown: %d\n", r);
@@ -120,7 +132,9 @@ static void *con_th(void *v_arg)
 		// handle packet advancing.
 		size_t left_len = buf_occ - whole_frame_len;
 		memmove(buf, buf + whole_frame_len, left_len);
+		buf_occ = left_len;
 		need_more = false;
+		//con_prt(arg, "buff loop %zu %zu %zu\n", left_len, whole_frame_len, buf_occ);
 	}
 
 e_shutdown:
