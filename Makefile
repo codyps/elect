@@ -1,7 +1,7 @@
 all::
 
 TARGETS = cla ctf query vote
-cla  : cla.o   proto.o tcp.o accept_spawn.o
+cla  : cla.o   proto.o tcp.o ballot.o accept_spawn.o
 ctf  : ctf.o   proto.o tcp.o accept_spawn.o tabulate.o
 query: query.o proto.o tcp.o
 vote : vote.o  proto.o tcp.o ballot.o

@@ -44,28 +44,44 @@ struct pcc_arg {
 	pthread_t th;
 };
 
-static void *periodic_check_ctf(void *v_arg)
+int voter_rec_cmp_by_vn(struct voter_rec *v1, struct voter_rec *v2)
 {
-	/* TODO: periodically check the results from the CTF aren't lieing */
-	struct pcc_arg *arg = v_arg;
-	return NULL;
+	return memcmp(&v1->vn, &v2->vn, sizeof(v2->vn));
+}
+
+struct voter_rec *voters_find_by_vn(struct voters *v, valid_num_t *vn)
+{
+	struct voter_rec vr;
+	memcpy(&vr.vn, vn, sizeof(vn));
+
+	struct voter_rec **res = (struct voter_rec **)tfind(&vr,
+			&v->root,
+			(comparison_fn_t)voter_rec_cmp_by_vn);
+
+	if (!res) {
+		/* is new... */
+		return NULL;
+	}
+
+	/* is old */
+	return *res;
 }
 
 static void *periodic_voters_ctf(void *v_arg)
 {
-	/* TODO: update our knowledge of who voted */
+	/* update our knowledge of who voted */
 	struct pcc_arg *arg = v_arg;
 
 	for(;;) {
 		sleep(5);
 
-		int fd = tcpw_connect("ctf", arg->ctf_addr, arg->ctf_port, ctf_ai);
+		int fd = tcpw_connect("ctf", arg->ctf_addr, arg->ctf_port, arg->ctf_ai);
 		if (fd < 0)
 			continue;
 
 		proto_frame_op(fd, OP_REQ_VOTERS);
 
-		unsigned char ct_buf[FRAME_LEN_BYTES + FRAME_OP_BYTES + FRAME_LEN_BYTES];
+		unsigned char ct_buf[FRAME_LEN_BYTES + FRAME_OP_BYTES];
 		ssize_t ct_len = recv(fd, ct_buf, sizeof(ct_buf), MSG_WAITALL);
 
 		if (ct_len < 0) {
@@ -83,81 +99,48 @@ static void *periodic_voters_ctf(void *v_arg)
 		frame_len_t frame_len = proto_decode_len(ct_buf);
 
 		if (frame_len != FRAME_OP_BYTES + FRAME_LEN_BYTES) {
-			w_prt("periodic voters: recved bad frame_len: %d\n", frame_len);
+			w_prt("periodic voters: recved bad frame_len: %llu\n", frame_len);
 			goto clean_fd;
 		}
 
 
 		frame_op_t  op = proto_decode_op(ct_buf + FRAME_LEN_BYTES);
 
-		if (op != OP_BALLOT_OPTION_CT) {
+		if (op != OP_VOTERS) {
 			w_prt("periodic voters: bad op: got %d wanted %d\n",
-					op, OP_BALLOT_OPTION_CT);
+					op, OP_VOTERS);
 			goto clean_fd;
 		}
 
-		frame_len_t option_ct = proto_decode_len(ct_buf + FRAME_LEN_BYTES + FRAME_OP_BYTES);
+		/* the rest of the data is vnums */
+		size_t payload_len = frame_len - FRAME_OP_BYTES;
+		size_t vnum_ct = payload_len / VALID_NUM_BYTES;
+		size_t vnum_rem = payload_len % VALID_NUM_BYTES;
 
-		unsigned i;
-		for (i = 0; i < option_ct; i++) {
-			/* recv OP_RESULTS */
-			unsigned char res_base_buf[FRAME_LEN_BYTES + FRAME_OP_BYTES + FRAME_LEN_BYTES];
-			ssize_t rb_len = recv(fd, res_base_buf, sizeof(res_base_buf), MSG_WAITALL);
+		if (vnum_rem) {
+			w_prt("periodic voters: remainder %d, ct %d x %d, len %d\n",
+					vnum_rem, vnum_ct, VALID_NUM_BYTES, payload_len);
+			goto clean_fd;
+		}
 
-			if (rb_len != sizeof(res_base_buf)) {
-				w_prt("periodic voters: OP_RES %d: bad recv len: %d\n",
-						i, rb_len);
+		size_t i;
+		for (i = 0; i < vnum_ct; i++) {
+			valid_num_t vn;
+			ssize_t vn_r_len = recv(fd, vn.data, sizeof(vn.data), MSG_WAITALL);
+			if (vn_r_len != sizeof(vn.data)) {
+				w_prt("periodic voters: %d: vn len got %d want %d\n",
+						i, vn_r_len, sizeof(vn.data));
 				goto clean_fd;
 			}
 
-			frame_len_t frame_len = proto_decode_len(res_base_buf);
-			frame_op_t  frame_op  = proto_decode_op(res_base_buf + FRAME_LEN_BYTES);
-			frame_len_t bo_len    = proto_decode_len(res_base_buf +
-							FRAME_LEN_BYTES + FRAME_OP_BYTES);
-
-			struct ballot_option *bo = ballot_option_create(bo_len);
-			if (!bo) {
-				w_prt("ballot option alloc failed.");
+			struct voter_rec *vr = voters_find_by_vn(arg->vs, &vn);
+			if (vr) {
+				vr->has_voted = true;
+			} else {
+				w_prt("Invalid Validation Number reported\n");
 			}
-
-			ssize_t bo_recv_len = recv(fd, bo->data, bo->len, MSG_WAITALL);
-
-			if (bo_recv_len != bo_len) {
-				w_prt("periodic voters: OP_RES %d: ballot option rl bad: got %d wanted\n",
-						i, bo_recv_len, bo_len);
-				goto clean_bo;
-			}
-
-			size_t payload_len = frame_len - FRAME_OP_BYTES;
-			size_t ident_num_bytes = payload_len - FRAME_LEN_BYTES - bo_len;
-			size_t ident_num_ct = ident_num_bytes / IDENT_NUM_BYTES;
-			size_t rem_bytes = ident_num_bytes % IDENT_NUM_BYTES;
-
-			if (rem_bytes) {
-				w_prt("periodic voters: OP_RES %d: remainder: %d\n",
-						i, rem_bytes);
-				goto clean_bo;
-			}
-
-			unsigned j;
-			for (j = 0; j < ident_num_ct; j++) {
-				ident_num_t in;
-				ssize_t in_len = recv(fd, in.data, sizeof(in.data), MSG_WAITALL);
-				if (in_len != sizeof(in.data)) {
-					w_prt("periodic voters: %d: %d: bad len: got %d, want %d\n",
-							i, j, in_len, sizeof(in.data));
-					goto clean_bo;
-				}
-
-				/* TODO: do something with in */
-
-			}
-
-			continue;
-clean_bo:
-			bo_ref_dec(bo);
-			goto clean_fd;
 		}
+
 clean_fd:
 		close(fd);
 	}
@@ -182,6 +165,7 @@ static int voters_add_voter(struct voters *vs, struct voter_rec *vr)
 	}
 
 	/* new */
+	vs->ct ++;
 	return 0;
 }
 
@@ -197,7 +181,7 @@ static int read_auth_line(struct voter_rec *vr, char *line, size_t line_len)
 	vr->name = name;
 	vr->pass = pass;
 	w_prt("name: %s pass: %s\n", name, pass);
-	memset(&vr->vn, 0, sizeof(vr->vn));
+	valid_num_init(&vr->vn);
 	vr->has_voted = false;
 
 	return 0;
@@ -328,13 +312,6 @@ int main(int argc, char *argv[])
 		.ctf_addr = argv[3],
 		.ctf_port = argv[4]
 	};
-
-	r = pthread_create(&pa.th, &th_attr, periodic_check_ctf, &pa);
-	if (r) {
-		w_prt("could not start periodic ctf check thread: %s\n",
-				strerror(r));
-		return 5;
-	}
 
 	r = pthread_create(&pa.th, &th_attr, periodic_voters_ctf, &pa);
 	if (r) {
