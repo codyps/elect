@@ -51,7 +51,8 @@ enum {
 	OP_REQ_VNUM,	/* serviced by CLA */
 	OP_VNUM,	/* responce */
 	OP_REQ_VOTER_NAMES,  /* service */
-	OP_VOTER_NAMES,      /* responce */
+	OP_VOTER_NAMES_CT,      /* responce */
+	OP_VOTER_NAME		/* also responce */
 };
 
 /* sends a simple frame containing only an op */

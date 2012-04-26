@@ -2,7 +2,7 @@
  */
 #include "warn.h"
 #include "tcp.h"
-
+#include "proto.h"
 
 int main(int argc, char *argv[])
 {
@@ -17,6 +17,7 @@ int main(int argc, char *argv[])
 		return 2;
 
 
+	proto_frame_op(fd, OP_REQ_VOTER_NAMES);
 
 
 	return 0;

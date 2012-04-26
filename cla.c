@@ -23,6 +23,7 @@
 #include <pthread.h>
 #include <search.h>
 #include <stdbool.h>
+#include <time.h>
 #include <unistd.h>
 
 struct voter_rec {
@@ -55,16 +56,17 @@ struct pcc_arg {
 
 int voter_vn_cmp(struct voter_rec *v1, struct voter_rec *v2)
 {
-	return memcmp(&v1->vn, &v2->vn, sizeof(v2->vn));
+	return memcmp(v1->vn.data, v2->vn.data, VALID_NUM_BYTES);
 }
 
 struct voter_rec *voters_find_by_vn(struct voters *v, valid_num_t *vn)
 {
 	struct voter_rec vr;
 	memset(&vr, 0, sizeof(vr));
-	memcpy(&vr.vn, vn, sizeof(vn));
+	memcpy(&(vr.vn.data), vn->data, VALID_NUM_BYTES);
 
-	struct voter_rec **res = (struct voter_rec **)tfind(&vr,
+	struct voter_rec **res = (struct voter_rec **)tfind(
+			&vr,
 			&v->root_by_vn,
 			(comparison_fn_t)voter_vn_cmp);
 
@@ -236,7 +238,10 @@ static void *periodic_voters_ctf(void *v_arg)
 			if (vr) {
 				vr->has_voted = true;
 			} else {
-				w_prt("Invalid Validation Number reported\n");
+				w_prt("Invalid Validation Number reported: ");
+				valid_num_print(&vn, stderr);
+				putc('\n', stderr);
+
 			}
 		}
 
@@ -403,9 +408,12 @@ static int cla_handle_packet(struct con_arg *arg, frame_op_t op,
 		return 0;
 	}
 		break;
-	case OP_REQ_VOTER_NAMES:
+	case OP_REQ_VOTER_NAMES: {
 		/* TODO: XXX: */
+		int cfd = arg->cfd;
+		proto_send_len(cfd, FRAME_OP_BYTES + FRAME_LEN_BYTES);
 
+	}
 		break;
 	default:
 		w_prt("unknown op: %d\n", op);
@@ -417,6 +425,8 @@ static int cla_handle_packet(struct con_arg *arg, frame_op_t op,
 
 int main(int argc, char *argv[])
 {
+	srand(time(NULL));
+
 	if (argc != 6) {
 		w_prt(
 		"usage: %s <listen addr> <listen port> <ctf addr> <ctf port> <auth file>\n",

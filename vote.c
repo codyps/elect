@@ -8,6 +8,7 @@
 #include "tcp.h"
 #include "proto.h"
 
+#include <time.h>
 #include <unistd.h>
 
 static int get_vnum(char *cla_addr, char *cla_port,
@@ -30,6 +31,8 @@ static int get_vnum(char *cla_addr, char *cla_port,
 
 int main(int argc, char *argv[])
 {
+	srand(time(NULL));
+
 	if (argc != 8) {
 		w_prt("usage: %s <cla addr> <cla port> <ctf addr> <ctf port> <name> <pass> <vote>\n",
 			argc?argv[0]:"vote");
