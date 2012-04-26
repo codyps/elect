@@ -3,19 +3,29 @@
  */
 
 #include "warn.h"
+#include "proto.h"
+#include "ballot.h"
+#include "tcp.h"
 
-int decode_results() {
+#include <sys/types.h>
+#include <sys/socket.h>
+
+#include <errno.h>
+#include <unistd.h>
+
+int recv_print_results(int fd)
+{
 	unsigned char ct_buf[FRAME_LEN_BYTES + FRAME_OP_BYTES + FRAME_LEN_BYTES];
 	ssize_t ct_len = recv(fd, ct_buf, sizeof(ct_buf), MSG_WAITALL);
 
 	if (ct_len < 0) {
-		w_prt("periodic voters: error on recv: %s\n", strerror(errno));
+		w_prt("error on recv: %s\n", strerror(errno));
 		goto clean_fd;
 	} else if (ct_len == 0) {
-		w_prt("periodic voters: len = 0, assuming other end died.");
+		w_prt("len = 0, assuming other end died.");
 		goto clean_fd;
 	} else if (ct_len != sizeof(ct_buf)) {
-		w_prt("periodic voters: recv has bad size: got %d != %d wanted\n",
+		w_prt("recv has bad size: got %d != %d wanted\n",
 				ct_len, sizeof(ct_buf));
 		goto clean_fd;
 	}
@@ -23,7 +33,7 @@ int decode_results() {
 	frame_len_t frame_len = proto_decode_len(ct_buf);
 
 	if (frame_len != FRAME_OP_BYTES + FRAME_LEN_BYTES) {
-		w_prt("periodic voters: recved bad frame_len: %d\n", frame_len);
+		w_prt("recved bad frame_len: %llu\n", frame_len);
 		goto clean_fd;
 	}
 
@@ -31,7 +41,7 @@ int decode_results() {
 	frame_op_t  op = proto_decode_op(ct_buf + FRAME_LEN_BYTES);
 
 	if (op != OP_BALLOT_OPTION_CT) {
-		w_prt("periodic voters: bad op: got %d wanted %d\n",
+		w_prt("bad op: got %d wanted %d\n",
 				op, OP_BALLOT_OPTION_CT);
 		goto clean_fd;
 	}
@@ -45,7 +55,7 @@ int decode_results() {
 		ssize_t rb_len = recv(fd, res_base_buf, sizeof(res_base_buf), MSG_WAITALL);
 
 		if (rb_len != sizeof(res_base_buf)) {
-			w_prt("periodic voters: OP_RES %d: bad recv len: %d\n",
+			w_prt("res %d: bad recv len: %d\n",
 					i, rb_len);
 			goto clean_fd;
 		}
@@ -55,6 +65,11 @@ int decode_results() {
 		frame_len_t bo_len    = proto_decode_len(res_base_buf +
 						FRAME_LEN_BYTES + FRAME_OP_BYTES);
 
+		if (frame_op != OP_RESULTS) {
+			w_prt("wrong op\n");
+			goto clean_fd;
+		}
+
 		struct ballot_option *bo = ballot_option_create(bo_len);
 		if (!bo) {
 			w_prt("ballot option alloc failed.");
@@ -62,8 +77,8 @@ int decode_results() {
 
 		ssize_t bo_recv_len = recv(fd, bo->data, bo->len, MSG_WAITALL);
 
-		if (bo_recv_len != bo_len) {
-			w_prt("periodic voters: OP_RES %d: ballot option rl bad: got %d wanted\n",
+		if (bo_recv_len != (ssize_t)bo_len) {
+			w_prt("res %d: ballot option rl bad: got %d wanted %llu\n",
 					i, bo_recv_len, bo_len);
 			goto clean_bo;
 		}
@@ -79,6 +94,11 @@ int decode_results() {
 			goto clean_bo;
 		}
 
+		printf("ballot option: ");
+		ballot_option_print(bo, stdout);
+		putchar('\n');
+		printf("count: %zu\n", ident_num_ct);
+
 		unsigned j;
 		for (j = 0; j < ident_num_ct; j++) {
 			ident_num_t in;
@@ -90,6 +110,9 @@ int decode_results() {
 			}
 
 			/* TODO: do something with in */
+			printf("\t");
+			ident_num_print(&in, stdout);
+			putchar('\n');
 
 		}
 
@@ -102,6 +125,7 @@ clean_bo:
 clean_fd:
 	close(fd);
 
+	return 0;
 }
 
 
@@ -119,7 +143,7 @@ int main(int argc, char **argv)
 		return 2;
 	}
 
-	/* TODO: fill in */
+	proto_frame_op(fd, OP_REQ_RESULTS);
 
-	return 0;
+	return recv_print_results(fd);
 }

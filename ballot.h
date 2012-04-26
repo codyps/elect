@@ -26,6 +26,20 @@ struct ballot_option {
 	unsigned char data[];
 };
 
+static inline struct ballot_option *bo_ref_inc(struct ballot_option *ba)
+{
+	ba->ref++;
+	return ba;
+}
+
+static inline void bo_ref_dec(struct ballot_option *ba)
+{
+	ba->ref--;
+	if (ba->ref == 0) {
+		free(ba);
+	}
+}
+
 void ident_num_init(ident_num_t *in);
 void ident_num_print(ident_num_t *in, FILE *out);
 

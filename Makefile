@@ -1,11 +1,11 @@
 all::
 
-TARGETS = cla ctf query vote
+TARGETS = cla ctf query vote results
 cla    : cla.o     proto.o tcp.o ballot.o accept_spawn.o
 ctf    : ctf.o     proto.o tcp.o accept_spawn.o tabulate.o
 query  : query.o   proto.o tcp.o
 vote   : vote.o    proto.o tcp.o ballot.o
-results: results.o tcp.o
+results: results.o proto.o tcp.o ballot.o
 
 CFLAGS = -ggdb -O0
 LDFLAGS=

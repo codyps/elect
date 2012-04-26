@@ -29,20 +29,6 @@ struct vote_rec {
 	struct list_head l;
 };
 
-static inline struct ballot_option *bo_ref_inc(struct ballot_option *ba)
-{
-	ba->ref++;
-	return ba;
-}
-
-static inline void bo_ref_dec(struct ballot_option *ba)
-{
-	ba->ref--;
-	if (ba->ref == 0) {
-		free(ba);
-	}
-}
-
 struct vote_store {
 	void *root;
 	unsigned vote_recs; /* ie: number of ballot options */
