@@ -34,6 +34,7 @@ struct voter_rec {
 struct voters {
 	void *root;
 	unsigned ct;
+	struct list_head v_list;
 };
 
 struct pcc_arg {
@@ -191,6 +192,7 @@ static void voters_init(struct voters *vs)
 {
 	vs->root = NULL;
 	vs->ct   = 0;
+	list_init(&vs->v_list);
 }
 
 static int read_auth_file(struct voters *vs, char *fname)
