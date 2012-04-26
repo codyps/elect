@@ -33,7 +33,7 @@ static int send_voters_cb(struct valid_num_rec *vnr, void *pdata)
 	return 0;
 }
 
-int ctf_handle_packet(struct con_arg *arg, frame_op_t op,
+static int ctf_handle_packet(struct con_arg *arg, frame_op_t op,
 		unsigned char *payload, size_t payload_len)
 {
 	int cfd = arg->cfd;

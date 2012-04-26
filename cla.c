@@ -17,6 +17,7 @@
 #include "proto.h"
 
 #include "pthread_helper.h"
+#include "accept_spawn.h"
 
 #include <pthread.h>
 #include <search.h>
@@ -51,13 +52,6 @@ static void *periodic_voters_ctf(void *v_arg)
 {
 	/* TODO: update our knowledge of who voted */
 	struct pcc_arg *arg = v_arg;
-	return NULL;
-}
-
-static void *cla_con_th(void *v_arg)
-{
-	/* TODO: handle incomming connections */
-	struct con_arg *arg = v_arg;
 	return NULL;
 }
 
@@ -172,6 +166,17 @@ static int send_voters_to_ctf(struct addrinfo *ai, struct voters *vs)
 	return -1;
 }
 
+static int cla_handle_packet(struct con_arg *arg, frame_op_t op,
+		unsigned char *payload, size_t payload_len)
+{
+	switch(op) {
+	default:
+		return 1;
+	}
+
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
 	if (argc != 6) {
@@ -230,8 +235,8 @@ int main(int argc, char *argv[])
 
 	int tl = tcpw_listen(argv[1], argv[2]);
 	if (tl == -1) {
-		return 3;
+		return 7;
 	}
 
-	return accept_spawn_loop(tl, cla_con_th NULL);
+	return accept_spawn_loop(tl, cla_handle_packet, NULL);
 }
