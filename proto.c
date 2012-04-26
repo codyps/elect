@@ -36,6 +36,11 @@ frame_op_t proto_decode_op(unsigned char *buf)
 	return o;
 }
 
+void proto_decode_valid_num(unsigned char *buf, valid_num_t *vn)
+{
+	memcpy(&vn->data, buf, VALID_NUM_BYTES);
+}
+
 
 int proto_decode_vote(unsigned char *buf, size_t len, struct vote *res)
 {

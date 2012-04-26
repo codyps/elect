@@ -298,12 +298,24 @@ static int read_auth_file(struct voters *vs, char *fname)
 	}
 }
 
-static int send_voters_to_ctf(struct addrinfo *ai, struct voters *vs)
+static int send_voters_to_ctf(struct addrinfo *ai, char *addr, char *port, struct voters *vs)
 {
-	/* TODO: impl */
-	return -1;
-}
+	int fd = tcpw_connect("ctf", addr, port, ai);
+	if (fd < 0)
+		return 1;
 
+	struct voter_rec *vr;
+	list_for_each_entry(vr, &vs->v_list, l) {
+		/* TODO: serialize vnum and send */
+		int r = proto_frame_vnum(fd, &vr->vn);
+		if (r) {
+			w_prt("error sending vnum");
+		}
+	}
+
+	close(fd);
+	return 0;
+}
 
 static int cla_handle_packet(struct con_arg *arg, frame_op_t op,
 		unsigned char *payload, size_t payload_len)
@@ -385,7 +397,7 @@ int main(int argc, char *argv[])
 		return 3;
 	}
 
-	r = send_voters_to_ctf(ctf_ai, &vs);
+	r = send_voters_to_ctf(ctf_ai, argv[3], argv[4], &vs);
 	if (r) {
 		w_prt("send voters to ctf failed: %d\n", r);
 		return 4;

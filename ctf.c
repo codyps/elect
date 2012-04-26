@@ -121,6 +121,16 @@ static int ctf_handle_packet(struct con_arg *arg, frame_op_t op,
 		proto_send_op (cfd, OP_VOTERS);
 		tabu_for_each_voted_valid_num_rec(tab, send_voters_cb, arg);
 		break;
+	case OP_VNUM: {
+		/* add vnum to list */
+		valid_num_t vn;
+		proto_decode_valid_num(payload, &vn);
+		tabu_add_valid_num(tab, &vn);
+	}
+		break;
+	default:
+		w_prt("unknown op %d\n", op);
+		return 1;
 	}
 
 	return 0;

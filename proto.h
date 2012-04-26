@@ -41,7 +41,6 @@ enum {
 
 	/* Serviced by the CTF */
 	OP_VOTE,	/* serviced by CTF, returns OP_FAIL or OP_SUCC. */
-	OP_STARTTLS,	/* serviced by CTF */
 	OP_REQ_VOTERS,  /* serviced by CTF */
 	OP_VOTERS,	/* reply from CTF */
 	OP_REQ_RESULTS, /* serviced by CTF */
@@ -74,6 +73,7 @@ int proto_send_ballot_option(int fd, struct ballot_option const *opt);
 frame_len_t proto_decode_len(unsigned char *buf);
 frame_op_t  proto_decode_op(unsigned char *buf);
 int         proto_decode_vote(unsigned char *buf, size_t len, struct vote *res);
+void        proto_decode_valid_num(unsigned char *buf, valid_num_t *vn);
 
 int  cla_get_vnum( int fd, char const *name, char const *pass, valid_num_t *vn);
 int  ctf_send_vote(int fd, char const *vote,
