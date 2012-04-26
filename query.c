@@ -4,6 +4,8 @@
 #include "tcp.h"
 #include "proto.h"
 
+#include <gnutls/gnutls.h>
+
 int show_voters(int fd, frame_len_t voter_count)
 {
 	frame_len_t i;
@@ -49,6 +51,7 @@ int show_voters(int fd, frame_len_t voter_count)
 
 int main(int argc, char *argv[])
 {
+	gnutls_global_init();
 	if (argc != 3) {
 		w_prt("usage: %s <cla addr> <cla port>\n",
 				argc?argv[0]:"query");

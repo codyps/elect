@@ -10,6 +10,7 @@
 
 #include <time.h>
 #include <unistd.h>
+#include <gnutls/gnutls.h>
 
 static int get_vnum(char *cla_addr, char *cla_port,
 		char *name, char *pass, valid_num_t *vn)
@@ -31,6 +32,7 @@ static int get_vnum(char *cla_addr, char *cla_port,
 
 int main(int argc, char *argv[])
 {
+	gnutls_global_init();
 	srand(time(NULL));
 
 	if (argc != 8) {
