@@ -122,8 +122,7 @@ static int voters_add_voter(struct voters *vs, struct voter_rec *vr)
 			(comparison_fn_t)voter_name_cmp);
 
 	if (r1 == NULL) {
-		w_prt("out of mem for voters (1)\n");
-		return -1;
+		return -ENOMEM;
 	}
 
 	struct voter_rec **r2 = (struct voter_rec **)tsearch(
@@ -133,25 +132,37 @@ static int voters_add_voter(struct voters *vs, struct voter_rec *vr)
 
 	if (r2 == NULL) {
 		w_prt("out of mem for voters (2)\n");
-		return -1;
+		return -ENOMEM;
 	}
 
 	if (*r1 != vr) {
 		/* already exsists */
-		w_prt("-- r1\n");
 		return 1;
 	}
 
 	if (*r2 != vr) {
-		/* already exsists */
-		w_prt("-- r2\n");
-		return 1;
+		/* already exsists, should never get here. */
+		return 2;
 	}
 
 	/* new */
 	list_add(&vs->v_list, &(*r1)->l);
 	vs->ct ++;
 	return 0;
+}
+
+static int voters_mark_as_voted(struct voters *vs, valid_num_t *vn)
+{
+	struct voter_rec *vr = voters_find_by_vn(vs, &vn);
+	if (vr) {
+		if (!vr->has_voted) {
+			vr->has_voted = true;
+			vs->num_voted ++;
+		}
+		return 0;
+	} else {
+		return EINVAL;
+	}
 }
 
 static void *periodic_voters_ctf(void *v_arg)
@@ -236,15 +247,11 @@ static void *periodic_voters_ctf(void *v_arg)
 				goto clean_fd;
 			}
 
-			struct voter_rec *vr = voters_find_by_vn(arg->vs, &vn);
-			if (vr) {
-				vr->has_voted = true;
-				arg->vs->num_voted ++;
-			} else {
+			int r = voters_mark_as_voted(arg->vs, &vn);
+			if (r) {
 				w_prt("Invalid Validation Number reported: ");
 				valid_num_print(&vn, stderr);
 				putc('\n', stderr);
-
 			}
 		}
 
@@ -253,7 +260,6 @@ clean_fd:
 	}
 	return NULL;
 }
-
 
 static int read_auth_line(struct voter_rec *vr, char *line,
 		__attribute__((__unused__)) size_t line_len)
@@ -332,7 +338,7 @@ static int read_auth_file(struct voters *vs, char *fname)
 
 		r = voters_add_voter(vs, vr);
 		if (r) {
-			w_prt("voter is a duplicate, skipping.\n");
+			w_prt("failed to add voter\n");
 			continue;
 		}
 
