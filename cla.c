@@ -153,7 +153,7 @@ static int voters_add_voter(struct voters *vs, struct voter_rec *vr)
 
 static int voters_mark_as_voted(struct voters *vs, valid_num_t *vn)
 {
-	struct voter_rec *vr = voters_find_by_vn(vs, &vn);
+	struct voter_rec *vr = voters_find_by_vn(vs, vn);
 	if (vr) {
 		if (!vr->has_voted) {
 			vr->has_voted = true;
