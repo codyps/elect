@@ -43,7 +43,6 @@ void proto_decode_valid_num(unsigned char *buf, valid_num_t *vn)
 	memcpy(&vn->data, buf, VALID_NUM_BYTES);
 }
 
-
 int proto_decode_vote(unsigned char *buf, size_t len, struct vote *res)
 {
 	if (len < VALID_NUM_BYTES + IDENT_NUM_BYTES + 1) {

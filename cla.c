@@ -204,7 +204,7 @@ static void *periodic_voters_ctf(void *v_arg)
 			w_prt("periodic voters: len = 0, assuming other end died.\n");
 			goto clean_fd;
 		} else if (ct_len != sizeof(ct_buf)) {
-			w_prt("periodic voters: recv has bad size: got %d != %d wanted\n",
+			w_prt("periodic voters: recv has bad size: got %zd != %zu wanted\n",
 					ct_len, sizeof(ct_buf));
 			goto clean_fd;
 		}
@@ -220,7 +220,7 @@ static void *periodic_voters_ctf(void *v_arg)
 		frame_op_t  op = proto_decode_op(ct_buf + FRAME_LEN_BYTES);
 
 		if (op != OP_VOTERS) {
-			w_prt("periodic voters: bad op: got %d wanted %d\n",
+			w_prt("periodic voters: bad op: got %zu wanted %zu\n",
 					op, OP_VOTERS);
 			goto clean_fd;
 		}
@@ -231,7 +231,7 @@ static void *periodic_voters_ctf(void *v_arg)
 		size_t vnum_rem = payload_len % VALID_NUM_BYTES;
 
 		if (vnum_rem) {
-			w_prt("periodic voters: remainder %d, ct %d x %d, len %d\n",
+			w_prt("periodic voters: remainder %zu, ct %zu x %zu, len %zu\n",
 					vnum_rem, vnum_ct, VALID_NUM_BYTES, payload_len);
 			goto clean_fd;
 		}
@@ -242,7 +242,7 @@ static void *periodic_voters_ctf(void *v_arg)
 			valid_num_t vn;
 			ssize_t vn_r_len = recv(fd, vn.data, sizeof(vn.data), MSG_WAITALL);
 			if (vn_r_len != sizeof(vn.data)) {
-				w_prt("periodic voters: %d: vn len got %d want %d\n",
+				w_prt("periodic voters: %zu: vn len got %zd want %zu\n",
 						i, vn_r_len, sizeof(vn.data));
 				goto clean_fd;
 			}

@@ -32,6 +32,7 @@ static int get_vnum(char *cla_addr, char *cla_port,
 
 int main(int argc, char *argv[])
 {
+
 	gnutls_global_init();
 	srand(time(NULL));
 
@@ -57,6 +58,13 @@ int main(int argc, char *argv[])
 		return 6;
 	}
 
+	gnutls_session_t *session;
+	r = gnutls_init(&session, GNUTLS_CLIENT);
+	if (r) {
+		w_prt("gnutls error");
+		return 33;
+	}
+
 	ident_num_t in;
 	ident_num_init(&in);
 	r = ctf_send_vote(ctf_fd, argv[7], strlen(argv[7]), &vn, &in);
@@ -70,5 +78,7 @@ int main(int argc, char *argv[])
 	putchar('\n');
 
 	close(ctf_fd);
+	gnutls_deinit(&session);
+	gnutls_global_deinit();
 	return 0;
 }
