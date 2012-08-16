@@ -56,9 +56,6 @@ TRACK_LDFLAGS = $(LINK):$(subst ','\'',$(ALL_LDFLAGS)) #')
 
 all:: $(TARGETS)
 
-iloc.yy.o: iloc.tab.h
-iloc.tab.o iloc.yy.o: ALL_CFLAGS:=$(filter-out -Wextra,$(ALL_CFLAGS))
-
 $(TARGETS) : .TRACK-LDFLAGS .TRACK-CFLAGS
 	$(QUIET_LINK)$(LINK) $(ALL_CFLAGS) $(ALL_LDFLAGS) -o \
 		$@ $(filter-out .TRACK-LDFLAGS,$(filter-out .TRACK-CFLAGS,$^))
