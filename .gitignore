@@ -1,8 +1,8 @@
 *~
 .*.swp
 *.[od]
-/TRACK-CFLAGS
-/TRACK-LDFLAGS
+/.TRACK-CFLAGS
+/.TRACK-LDFLAGS
 /ctf
 /cla
 /vote
