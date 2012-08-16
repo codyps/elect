@@ -23,8 +23,6 @@
 
 #include <unistd.h>
 
-#include <gnutls/gnutls.h>
-
 struct src_arg {
 	struct con_arg *arg;
 	bool is_first;
@@ -152,8 +150,6 @@ static int ctf_handle_packet(struct con_arg *arg, frame_op_t op,
 
 int main(int argc, char *argv[])
 {
-	gnutls_global_init();
-
 	if (argc != 3) {
 		w_prt("usage: %s <listen addr> <listen port>\n",
 				argc?argv[0]:"ctf");

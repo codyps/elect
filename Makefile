@@ -15,11 +15,8 @@ results: $(obj-results)
 CFLAGS = -ggdb -O0
 LDFLAGS=
 
-GNUTLS_CFLAGS := $(shell pkg-config gnutls --cflags)
-GNUTLS_LDFLAGS:= $(shell pkg-config gnutls --libs)
-
-ALL_CFLAGS  = $(CFLAGS) -std=gnu99 -MMD -Wall -Wextra $(GNUTLS_CFLAGS)
-ALL_LDFLAGS = $(LDFLAGS) -pthread $(GNUTLS_LDFLAGS)
+ALL_CFLAGS  = $(CFLAGS) -std=gnu99 -MMD -Wall -Wextra
+ALL_LDFLAGS = $(LDFLAGS) -pthread
 
 CC     = gcc
 LINK   = $(CC)

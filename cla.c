@@ -25,7 +25,6 @@
 #include <stdbool.h>
 #include <time.h>
 #include <unistd.h>
-#include <gnutls/gnutls.h>
 
 struct voter_rec {
 	struct list_head l;
@@ -450,8 +449,6 @@ static int cla_handle_packet(struct con_arg *arg, frame_op_t op,
 
 int main(int argc, char *argv[])
 {
-	gnutls_global_init();
-
 	srand(time(NULL));
 
 	if (argc != 6) {
