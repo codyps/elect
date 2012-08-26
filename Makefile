@@ -18,7 +18,7 @@ LDFLAGS=
 ALL_CFLAGS  = $(CFLAGS) -std=gnu99 -MMD -Wall -Wextra
 ALL_LDFLAGS = $(LDFLAGS) -pthread
 
-CC     = gcc
+CC     = $(CROSS_COMPILE)gcc
 LINK   = $(CC)
 LEX    = flex
 YACC   = bison
