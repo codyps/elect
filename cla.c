@@ -211,7 +211,7 @@ static void *periodic_voters_ctf(void *v_arg)
 		frame_len_t frame_len = proto_decode_len(ct_buf);
 
 		if (frame_len < FRAME_OP_BYTES) {
-			w_prt("periodic voters: recved bad frame_len: %llu\n", frame_len);
+			w_prt("periodic voters: recved bad frame_len: %"PRI_FRAMELEN"\n", frame_len);
 			goto clean_fd;
 		}
 
@@ -219,7 +219,7 @@ static void *periodic_voters_ctf(void *v_arg)
 		frame_op_t  op = proto_decode_op(ct_buf + FRAME_LEN_BYTES);
 
 		if (op != OP_VOTERS) {
-			w_prt("periodic voters: bad op: got %zu wanted %zu\n",
+			w_prt("periodic voters: bad op: got %zu wanted %d\n",
 					op, OP_VOTERS);
 			goto clean_fd;
 		}
@@ -230,7 +230,7 @@ static void *periodic_voters_ctf(void *v_arg)
 		size_t vnum_rem = payload_len % VALID_NUM_BYTES;
 
 		if (vnum_rem) {
-			w_prt("periodic voters: remainder %zu, ct %zu x %zu, len %zu\n",
+			w_prt("periodic voters: remainder %zu, ct %zu x %d, len %zu\n",
 					vnum_rem, vnum_ct, VALID_NUM_BYTES, payload_len);
 			goto clean_fd;
 		}
@@ -273,7 +273,7 @@ static int read_auth_line(struct voter_rec *vr, char *line,
 	vr->name_len = strlen(name);
 	vr->pass = strdup(pass);
 	vr->pass_len = strlen(pass);
-	w_prt("name: %s %d pass: %s %d\n", name, vr->name_len, pass, vr->pass_len);
+	w_prt("name: %s %zu pass: %s %zu\n", name, vr->name_len, pass, vr->pass_len);
 	valid_num_init(&vr->vn);
 	vr->has_voted = false;
 	list_init(&vr->l);
@@ -378,7 +378,7 @@ static int cla_handle_packet(struct con_arg *arg, frame_op_t op,
 	switch(op) {
 	case OP_REQ_VNUM: {
 		if (payload_len < FRAME_LEN_BYTES + 1 + 1) {
-			w_prt("vnum request too short: %d\n", payload_len);
+			w_prt("vnum request too short: %zu\n", payload_len);
 			return 1;
 		}
 
@@ -389,12 +389,12 @@ static int cla_handle_packet(struct con_arg *arg, frame_op_t op,
 		frame_len_t pass_len = payload_len - name_len - FRAME_LEN_BYTES;
 		unsigned char *pass  = name + name_len;
 
-		w_prt("name len: %llu pass len: %llu\n", name_len, pass_len);
+		w_prt("name len: %"PRI_FRAMELEN" pass len: %"PRI_FRAMELEN"\n", name_len, pass_len);
 
 		struct voter_rec *vr = voters_find_by_name(vs, name, name_len);
 		if (!vr) {
 			name[name_len] = '\0'; /* will overwrite a part of "pass len" */
-			w_prt("got a req for invalid voter: %s %llu\n", name, name_len);
+			w_prt("got a req for invalid voter: %s %"PRI_FRAMELEN"\n", name, name_len);
 			return 1;
 		}
 
@@ -440,7 +440,7 @@ static int cla_handle_packet(struct con_arg *arg, frame_op_t op,
 	}
 		break;
 	default:
-		w_prt("unknown op: %d\n", op);
+		w_prt("unknown op: %zu\n", op);
 		return 1;
 	}
 

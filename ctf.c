@@ -139,7 +139,7 @@ static int ctf_handle_packet(struct con_arg *arg, frame_op_t op,
 	}
 		break;
 	default:
-		w_prt("unknown op %d\n", op);
+		w_prt("unknown op %zu\n", op);
 		return 1;
 	}
 

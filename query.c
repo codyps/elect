@@ -23,7 +23,7 @@ int show_voters(int fd, frame_len_t voter_count)
 
 		frame_op_t  op = proto_decode_op(base_buf + FRAME_LEN_BYTES);
 		if (op != OP_VOTER_NAME) {
-			w_prt("invalid op, got %d needed %d\n", op, OP_VOTER_NAME);
+			w_prt("invalid op, got %zu needed %d\n", op, OP_VOTER_NAME);
 			return 8;
 		}
 
@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
 
 	frame_len_t fl = proto_decode_len(buf);
 	if (fl != FRAME_OP_BYTES + FRAME_LEN_BYTES + FRAME_LEN_BYTES) {
-		w_prt("bad len: %llu, need %d\n",
+		w_prt("bad len: %"PRI_FRAMELEN", need %d\n",
 				fl,
 				FRAME_OP_BYTES + FRAME_LEN_BYTES + FRAME_LEN_BYTES);
 		return 42;
@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
 
 	frame_op_t  op = proto_decode_op(buf + FRAME_LEN_BYTES);
 	if (op != OP_VOTER_NAMES_CT) {
-		w_prt("invalid op, got %d needed %d\n", op, OP_VOTER_NAMES_CT);
+		w_prt("invalid op, got %zu needed %d\n", op, OP_VOTER_NAMES_CT);
 		return 8;
 	}
 
@@ -89,12 +89,12 @@ int main(int argc, char *argv[])
 	frame_len_t non_voter_count = proto_decode_len(
 			buf + FRAME_LEN_BYTES + FRAME_OP_BYTES + FRAME_LEN_BYTES);
 
-	printf("voted: %llu\n", voter_count);
+	printf("voted: %"PRI_FRAMELEN"\n", voter_count);
 	if (show_voters(fd, voter_count)) {
 		w_prt("show voters failed.");
 		return 6;
 	}
-	printf("did not vote: %llu\n", non_voter_count);
+	printf("did not vote: %"PRI_FRAMELEN"\n", non_voter_count);
 	if (show_voters(fd, non_voter_count)) {
 		w_prt("show voters failed.");
 		return 7;

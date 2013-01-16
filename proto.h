@@ -6,6 +6,7 @@
 
 #include <errno.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -32,6 +33,8 @@
  */
 typedef uint_fast16_t frame_op_t;
 typedef uint_fast64_t frame_len_t;
+#define PRI_FRAMELEN PRIuFAST64
+#define PRI_FRAMEOP  PRIuFAST16
 #define FRAME_LEN_BYTES 8
 #define FRAME_OP_BYTES  2
 

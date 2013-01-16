@@ -25,7 +25,7 @@ int recv_print_results(int fd)
 		w_prt("len = 0, assuming other end died.");
 		goto clean_fd;
 	} else if (ct_len != sizeof(ct_buf)) {
-		w_prt("recv has bad size: got %d != %d wanted\n",
+		w_prt("recv has bad size: got %zu != %zu wanted\n",
 				ct_len, sizeof(ct_buf));
 		goto clean_fd;
 	}
@@ -33,7 +33,7 @@ int recv_print_results(int fd)
 	frame_len_t frame_len = proto_decode_len(ct_buf);
 
 	if (frame_len != FRAME_OP_BYTES + FRAME_LEN_BYTES) {
-		w_prt("recved bad frame_len: %llu\n", frame_len);
+		w_prt("recved bad frame_len: %"PRI_FRAMELEN"\n", frame_len);
 		goto clean_fd;
 	}
 
@@ -41,7 +41,7 @@ int recv_print_results(int fd)
 	frame_op_t  op = proto_decode_op(ct_buf + FRAME_LEN_BYTES);
 
 	if (op != OP_BALLOT_OPTION_CT) {
-		w_prt("bad op: got %d wanted %d\n",
+		w_prt("bad op: got %zu wanted %d\n",
 				op, OP_BALLOT_OPTION_CT);
 		goto clean_fd;
 	}
@@ -55,7 +55,7 @@ int recv_print_results(int fd)
 		ssize_t rb_len = recv(fd, res_base_buf, sizeof(res_base_buf), MSG_WAITALL);
 
 		if (rb_len != sizeof(res_base_buf)) {
-			w_prt("res %d: bad recv len: %d\n",
+			w_prt("res %u: bad recv len: %zd\n",
 					i, rb_len);
 			goto clean_fd;
 		}
@@ -78,7 +78,7 @@ int recv_print_results(int fd)
 		ssize_t bo_recv_len = recv(fd, bo->data, bo->len, MSG_WAITALL);
 
 		if (bo_recv_len != (ssize_t)bo_len) {
-			w_prt("res %d: ballot option rl bad: got %d wanted %llu\n",
+			w_prt("res %u: ballot option rl bad: got %zd wanted %"PRI_FRAMELEN"\n",
 					i, bo_recv_len, bo_len);
 			goto clean_bo;
 		}
@@ -89,7 +89,7 @@ int recv_print_results(int fd)
 		size_t rem_bytes = ident_num_bytes % IDENT_NUM_BYTES;
 
 		if (rem_bytes) {
-			w_prt("periodic voters: OP_RES %d: remainder: %d\n",
+			w_prt("periodic voters: OP_RES %u: remainder: %zu\n",
 					i, rem_bytes);
 			goto clean_bo;
 		}
@@ -104,7 +104,7 @@ int recv_print_results(int fd)
 			ident_num_t in;
 			ssize_t in_len = recv(fd, in.data, sizeof(in.data), MSG_WAITALL);
 			if (in_len != sizeof(in.data)) {
-				w_prt("periodic voters: %d: %d: bad len: got %d, want %d\n",
+				w_prt("periodic voters: %u: %u: bad len: got %zd, want %zu\n",
 						i, j, in_len, sizeof(in.data));
 				goto clean_bo;
 			}

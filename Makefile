@@ -1,16 +1,11 @@
 all::
 
-TARGETS = cla ctf query vote results
 obj-cla = cla.o proto.o tcp.o ballot.o accept_spawn.o
-cla    : $(obj-cla)
 obj-ctf = ctf.o proto.o tcp.o accept_spawn.o tabulate.o
-ctf    : $(obj-ctf)
 obj-query = query.o proto.o tcp.o
-query  : $(obj-query)
 obj-vote = vote.o proto.o tcp.o ballot.o
-vote   : $(obj-vote)
 obj-results = results.o proto.o tcp.o ballot.o
-results: $(obj-results)
+TARGETS = cla ctf query vote results
 
 CFLAGS = -ggdb -O0
 LDFLAGS=
@@ -18,7 +13,7 @@ LDFLAGS=
 ALL_CFLAGS  = $(CFLAGS) -std=gnu99 -MMD -Wall -Wextra
 ALL_LDFLAGS = $(LDFLAGS) -pthread
 
-CC     = gcc
+CC     = $(CROSS_COMPILE)gcc
 LINK   = $(CC)
 LEX    = flex
 YACC   = bison
@@ -56,7 +51,11 @@ TRACK_LDFLAGS = $(LINK):$(subst ','\'',$(ALL_LDFLAGS)) #')
 
 all:: $(TARGETS)
 
-$(TARGETS) : .TRACK-LDFLAGS .TRACK-CFLAGS
+iloc.yy.o: iloc.tab.h
+iloc.tab.o iloc.yy.o: ALL_CFLAGS:=$(filter-out -Wextra,$(ALL_CFLAGS))
+
+.SECONDEXPANSION:
+$(TARGETS) : .TRACK-LDFLAGS .TRACK-CFLAGS $$(obj-$$@)
 	$(QUIET_LINK)$(LINK) $(ALL_CFLAGS) $(ALL_LDFLAGS) -o \
 		$@ $(filter-out .TRACK-LDFLAGS,$(filter-out .TRACK-CFLAGS,$^))
 
