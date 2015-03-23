@@ -7,11 +7,16 @@ obj-vote = vote.o proto.o tcp.o ballot.o
 obj-results = results.o proto.o tcp.o ballot.o
 TARGETS = cla ctf query vote results
 
-CFLAGS = -ggdb -O0
+CFLAGS = -ggdb3 -Og
 LDFLAGS=
 
 ALL_CFLAGS  = $(CFLAGS) -std=gnu99 -MMD -Wall -Wextra
-ALL_LDFLAGS = $(LDFLAGS) -pthread
+ALL_LDFLAGS = $(LDFLAGS) -pthread -Wl,-O1,--as-needed,--gc-sections
+
+ifneq ($(LTO),)
+ALL_CFLAGS += -flto
+ALL_LDFLAGS += $(ALL_CFLAGS) -fuse-linker-plugin -fwhole-program
+endif
 
 CC     = $(CROSS_COMPILE)gcc
 LINK   = $(CC)
